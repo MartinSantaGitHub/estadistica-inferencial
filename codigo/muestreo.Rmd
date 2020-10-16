@@ -1,0 +1,76 @@
+---
+title: "Muestreo"
+author: "Martin Santamaria"
+date: "13/10/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+Sys.setenv(RETICULATE_PYTHON = "/Python38")
+library(reticulate)
+```
+
+```{r}
+library(faraway)
+set.seed(20)
+
+# Muestreo aleatorio con reposición
+flores.elegidas.10.con=sample(1:150,10,replace=TRUE)
+muestra.iris.10.con = iris[flores.elegidas.10.con,]
+
+# Muestreo aleatorio sin reposición
+flores.elegidas.10.sin=sample(1:150,10,replace=FALSE)
+muestra.iris.10.sin = iris[flores.elegidas.10.sin,] 
+
+# Muestreo sistemático
+primera.flor=sample(1:150,1)
+incremento = floor(150/10)
+flores.elegidas.10.sis = seq(from=primera.flor,by=incremento,length.out=10)
+flores.elegidas.10.sis = flores.elegidas.10.sis%%150
+muestra.iris.10.sis = iris[flores.elegidas.10.sis,]
+
+# Muestreo aleatorio estratificado
+fls.muestra.setosa=sample(1:50,4,replace=TRUE) 
+fls.muestra.versicolor=sample(51:100,4,replace=TRUE) 
+fls.muestra.virginica=sample(101:150,4,replace=TRUE) 
+muestra.iris.est=rbind(iris[fls.muestra.setosa,],iris[fls.muestra.versicolor,],
+                       iris[fls.muestra.virginica,])
+
+# Muestreo por clusters
+numeros.paises.elegidos = sample(1:32,4,replace=FALSE) 
+paises.elegidos = unique(worldcup$Team)[numeros.paises.elegidos]
+muestra.worldcup.con = worldcup[worldcup$Team%in%paises.elegidos,]
+
+# Muestreo polietápico
+worldcup.pais1 = worldcup[worldcup$Team==paises.elegidos[1],]
+worldcup.pais2 = worldcup[worldcup$Team==paises.elegidos[2],]
+worldcup.pais3 = worldcup[worldcup$Team==paises.elegidos[3],]
+worldcup.pais4 = worldcup[worldcup$Team==paises.elegidos[4],]
+
+jugadores.pais1 = sample(1:dim(worldcup.pais1)[1],5,replace=FALSE)
+jugadores.pais2 = sample(1:dim(worldcup.pais2)[1],5,replace=FALSE)
+jugadores.pais3 = sample(1:dim(worldcup.pais3)[1],5,replace=FALSE)
+jugadores.pais4 = sample(1:dim(worldcup.pais4)[1],5,replace=FALSE)
+
+muestra.worldcup.pol = rbind(worldcup.pais1[jugadores.pais1,],
+                             worldcup.pais2[jugadores.pais2,],
+                             worldcup.pais3[jugadores.pais3,],
+                             worldcup.pais4[jugadores.pais4,])
+```
+
+```{python}
+import random
+import pandas
+
+iris_py = r.iris
+iris_py.head()
+
+rows = random.sample(range(0,150),5)
+rows
+
+iris_py.iloc[rows,:]
+
+iris_py.sample(n=3)
+iris_py.sample(frac=0.02)
+```
