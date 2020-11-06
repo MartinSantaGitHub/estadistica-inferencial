@@ -1,0 +1,172 @@
+---
+title: "Intervalos"
+author: "Martin Santamaria"
+date: "2/11/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+Sys.setenv(RETICULATE_PYTHON = "/Python38")
+library(reticulate)
+```
+
+```{r}
+#set.seed(1012)
+mu=1.5; sigma = 1; alpha = 0.05
+poblacion=rnorm(10^6,mu,sigma)
+```
+
+```{r}
+ICZ=function(x,sigma,alpha){
+  c(mean(x)-qnorm(1-alpha/2)*sigma/sqrt(length(x)), mean(x)+qnorm(1-alpha/2)*sigma/sqrt(length(x)))
+}
+
+ICZ.2=function(media,sigma,alpha,n){
+  c(media-qnorm(1-alpha/2)*sigma/sqrt(n), media+qnorm(1-alpha/2)*sigma/sqrt(n))
+  }
+```
+
+```{r}
+set.seed(2)
+M=replicate(100,ICZ(sample(poblacion,50,replace=T),sigma,alpha))
+
+plot(1:10,
+     type="n",
+     xlim=c(1.2,1.8),
+     ylim=c(0,100),
+     xlab="Valores",
+     ylab="Replicaciones")
+
+seg.int=function(i){
+  color="grey";
+  if((mu<M[1,i]) | (mu>M[2,i])){color = "red"}
+  segments(M[1,i],i,M[2,i],i,col=color,lwd=3)
+}
+
+invisible(sapply(1:100,FUN=seg.int))
+
+abline(v=mu,lwd=3)
+```
+
+```{r}
+temperatura=c(36,35,38,38,36,37,38,36,37,36,
+              37,37,34,38,35,37,36,36,34,38,
+              36,37,35,35,35,35,36,36,36,35,
+              36,35,34,34,37,37,35,36,34,36)
+
+ICZ(temperatura)
+```
+
+```{r}
+alpha=0.01
+cuantil = qnorm(1-alpha/2)
+amplitud = 2
+s.piloto = 10
+(n.minimo = ceiling((2*cuantil*s.piloto/amplitud)^2))
+```
+
+```{r}
+set.seed(1000)
+muestra.iris = sample(1:150,30,replace=TRUE)
+long.petalo.muestra = iris[muestra.iris,]$Petal.Length
+t.test(long.petalo.muestra,conf.level=0.95)$conf.int
+```
+
+```{r}
+set.seed(2020)
+valores.poblacion=rnorm(10^7)
+
+(mu=mean(valores.poblacion))
+
+muestras=replicate(200, sample(valores.poblacion,50,replace=TRUE))
+
+IC.t= function(X, confianza=0.95){t.test(X, conf.level=confianza)$conf.int}
+ICs= apply(muestras,FUN=IC.t,MARGIN=2)
+
+Aciertos=length(which((mu>=ICs[1,]) & (mu<=ICs[2,])))
+Aciertos
+```
+
+```{r}
+plot(1,type="n",
+     xlim=c(-0.8,0.8),
+     ylim=c(0,200),
+     xlab="Valores",
+     ylab="Repeticiones",
+     main="")
+seg.int=function(i){
+  color="light blue";
+  if((mu<ICs[1,i]) | (mu>ICs[2,i])){color = "red"}
+  segments(ICs[1,i],i,ICs[2,i],i,col=color,lwd=2)
+}
+
+invisible(sapply(1:200,FUN=seg.int));
+
+abline(v=mu,lwd=2)
+```
+
+```{r}
+library(epitools)
+
+set.seed(1000)
+
+flores.elegidas = sample(1:150,60,replace=TRUE)
+
+muestra.flores.prop = iris[flores.elegidas,]
+head(muestra.flores.prop,10)
+
+(numero.flores.setosa=table(muestra.flores.prop$Species=="setosa")[2])
+
+binom.exact(numero.flores.setosa,60,conf.level=0.95)
+binom.wilson(numero.flores.setosa,60,conf.level=0.95)
+#binom.approx(numero.flores.setosa,60,conf.level=0.95) #n not > 100 
+
+binom.approx(340,500,conf.level=0.95)
+```
+
+```{r}
+tiempo=c(12, 13, 13, 14, 14, 14, 15, 15, 16, 17,
+         17, 18, 18, 19, 19, 25, 25, 26, 27, 30,
+         33, 34, 35, 40, 40, 51, 51, 58, 59, 83)
+
+n=30
+(var.muestral.tiempo = var(tiempo))
+
+alpha=0.05
+(cuantil.izquierda = qchisq(1-alpha/2,n-1))
+(cuantil.derecha = qchisq(alpha/2,n-1))
+
+(valor.izquierdo= (n-1)*var.muestral.tiempo/cuantil.izquierda)
+(valor.derecho= (n-1)*var.muestral.tiempo/cuantil.derecha)
+
+c(sqrt(valor.izquierdo),sqrt(valor.derecho))
+```
+
+```{r}
+library(EnvStats)
+
+(amplitud.sepalo.muestra = iris[flores.elegidas,]$Sepal.Width)
+
+varTest(amplitud.sepalo.muestra,conf.level=0.95)$conf.int
+```
+
+```{r}
+library(boot)
+
+set.seed(42)
+
+X=sort(replicate(1000, var(sample(iris[flores.elegidas,]$Petal.Length,replace=TRUE))))
+
+alpha = 0.05
+IC.boot=c(quantile(X,alpha/2),quantile(X,1-alpha/2))
+round(IC.boot,2)
+
+var.boot=function(X,indices){var(X[indices])}
+
+simulacion=boot(iris[flores.elegidas,]$Petal.Length,var.boot,1000)
+
+ci = boot.ci(simulacion)
+ci
+ci$percent[4:5]
+```

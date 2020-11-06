@@ -1,0 +1,135 @@
+---
+title: "Estimacion"
+author: "Martin Santamaria"
+date: "23/10/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+Sys.setenv(RETICULATE_PYTHON = "/Python38")
+library(reticulate)
+```
+
+```{r}
+n.muestras=10000
+n=40
+media.muestras = c()
+
+media.muestras = replicate(n.muestras,mean(sample(iris$Petal.Length,n,replace =TRUE)))
+
+# for (i in 1:n) {
+#   longitudes.elegidas = sample(1:150,40,replace=TRUE)
+#   media.muestras = c(media.muestras, mean(iris[longitudes.elegidas,]$Petal.Length))
+# }
+
+mean(iris$Petal.Length)
+mean(media.muestras)
+
+# Ver aquí
+sd(iris$Petal.Length)/sqrt(n)
+sd(media.muestras)
+
+sqrt((sum((media.muestras-mean(media.muestras))^2)/n.muestras)*(n.muestras/(n.muestras-1)))
+
+sqrt((sum((media.muestras-mean(media.muestras))^2)/n.muestras))
+```
+
+```{r}
+set.seed(1000)
+flores.elegidas = sample(1:150,60,replace=TRUE)
+muestra.flores = iris[flores.elegidas,]
+(prop.setosa = table(muestra.flores$Species=="setosa")[2]/length(muestra.flores$Species))
+props.muestrales = replicate(10000,table(sample(iris$Species,60,replace=TRUE)=="setosa")[2]/60)
+sd(props.muestrales)
+```
+
+```{r}
+taxis=c(1217,600,883,1026,150,715,297,137,508,134,38,961,538,1154,
+        314,1121,823,158,940,99,977,286,1006,1207,264,1183,1120,
+        498,606,566,1239,860,114,701,381,836,561,494,858,187)
+
+(N=max(taxis)+(max(taxis)-length(taxis))/length(taxis))
+```
+
+```{r}
+library(MASS)
+
+set.seed(98)
+muestra.poisson = rpois(50,lambda=5)
+muestra.poisson
+
+fitdistr(muestra.poisson, densfun = "poisson")
+
+(estimacion.lambda = mean(muestra.poisson))
+(estimacion.error.tipico= sqrt(estimacion.lambda/50))
+
+fitdistr(muestra.poisson,densfun = "normal")
+sd(muestra.poisson)*sqrt(49/50)
+```
+
+En `Python`
+
+Carga de las librerías 
+
+```{python}
+from scipy.stats import norm
+from numpy import linspace
+#from pylab import plot, show, hist, figure, title
+import matplotlib.pyplot as plt
+```
+
+Elegimos una m.a.s. de tamaño 150 de una v.a. $N(0,1)$
+
+```{python}
+sample = norm.rvs(loc = 0, scale = 1, size = 150)
+sample[1:10]
+```
+
+## Estimación puntual en `Python`
+
+Para estimar los parámetros, usamos la distribución adecuada (en nuestro caso una normal) e invocamos el método `fit`
+
+```{python}
+params = norm.fit(sample)
+print(f"Media = {params[0]}")
+print(f"Standard Deviation = {params[1]}")
+```
+
+Vamos a comparar la distribución con los parámetros estimados vs nuestra muestra.
+
+```{python}
+x = linspace(-5,5,100)
+pdf_fitted = norm.pdf(x, loc = params[0], scale = params[1])
+pdf_original = norm.pdf(x, loc = 0, scale = 1)
+```
+
+```{python}
+plt.figure(figsize=(5,2.7))
+plt.title("Ajuste de una normal")
+_ = plt.plot(x, pdf_fitted, 'r-', x, pdf_original, 'b--')
+_ = plt.hist(sample, density = True, alpha = 0.3)
+plt.show()
+```
+
+Rayleigh Distribution
+
+```{python}
+from scipy.stats import rayleigh
+
+sample = rayleigh.rvs(loc = 0, scale = 1, size = 150)
+params = rayleigh.fit(sample)
+
+print(f"Media = {params[0]}")
+print(f"Standard Deviation = {params[1]}")
+
+x = linspace(0,5,100)
+pdf_fitted = rayleigh.pdf(x, loc = params[0], scale = params[1])
+pdf_original = rayleigh.pdf(x, loc = 0, scale = 1)
+
+_ = plt.figure(figsize=(5,2.7))
+_ = plt.title("Ajuste de una Rayleigh")
+_ = plt.plot(x, pdf_fitted, 'b--', x, pdf_original, 'r-')
+_ = plt.hist(sample, density = True, alpha = 0.3)
+plt.show()
+```

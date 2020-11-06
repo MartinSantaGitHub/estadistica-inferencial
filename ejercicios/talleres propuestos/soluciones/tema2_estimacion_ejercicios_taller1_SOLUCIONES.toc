@@ -1,0 +1,18 @@
+\contentsline {section}{\numberline {1}Estimación taller 1}{1}{section.1}%
+\contentsline {subsection}{\numberline {1.1}Ejercicio 1}{1}{subsection.1.1}%
+\contentsline {subsection}{\numberline {1.2}Ejercicio 2}{1}{subsection.1.2}%
+\contentsline {subsection}{\numberline {1.3}Ejercicio 3}{1}{subsection.1.3}%
+\contentsline {subsection}{\numberline {1.4}Ejercicio 4}{1}{subsection.1.4}%
+\contentsline {subsection}{\numberline {1.5}Ejercicio 5}{1}{subsection.1.5}%
+\contentsline {subsection}{\numberline {1.6}Ejercicio 6}{2}{subsection.1.6}%
+\contentsline {subsection}{\numberline {1.7}Ejercicio 7}{2}{subsection.1.7}%
+\contentsline {subsection}{\numberline {1.8}Ejercicio 8}{2}{subsection.1.8}%
+\contentsline {section}{\numberline {2}Soluciones}{2}{section.2}%
+\contentsline {subsection}{\numberline {2.1}Solución ejercicio 1}{2}{subsection.2.1}%
+\contentsline {subsection}{\numberline {2.2}Solución ejercicio 2}{2}{subsection.2.2}%
+\contentsline {subsection}{\numberline {2.3}Solución ejercicio 3}{2}{subsection.2.3}%
+\contentsline {subsection}{\numberline {2.4}Solución ejercicio 4}{3}{subsection.2.4}%
+\contentsline {subsection}{\numberline {2.5}Solución ejercicio 5}{3}{subsection.2.5}%
+\contentsline {subsection}{\numberline {2.6}Solución ejercicio 6}{4}{subsection.2.6}%
+\contentsline {subsection}{\numberline {2.7}Solución ejercicio 7}{4}{subsection.2.7}%
+\contentsline {subsection}{\numberline {2.8}Solución ejercicio 8}{5}{subsection.2.8}%

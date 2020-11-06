@@ -1,0 +1,82 @@
+---
+title: "Tarea 2"
+author: "Martin Santamaria"
+date: "25/10/2020"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Ejercicio 1
+
+Estimamos el parámetro $b$ a partir del momento de orden 1 $M_1 = \overline{X}$ donde $\overline{X} = E(X) = \frac{a+b}{2}$
+
+hallamos $\overline{X}$
+
+```{r}
+registro_lluvias = c(0,0,0.7,1,0.1,0,0.2,0.5,0,0.6)
+media = mean(registro_lluvias)
+```
+
+y despejamos $\hat{b}$ de la fórmula de $E(X)$ teniendo en cuenta que $a = 0$
+
+```{r}
+(estimador_b = media*2)
+```
+
+### Ejercicio 2
+
+Los estimadores de los parámetros $\mu$ y $\sigma$ de una normal son:
+
+$\hat{u} = \overline{x}$
+
+$\hat{\sigma}^2 = s^2$ donde $s^2 = \frac{1}{n-1}\sum_{i=1}^n(x_i-\overline{x})^2$ es la varianza muestral.
+
+Procedemos a calcular lo pedido utilizando `R`
+
+$\hat{u}$
+
+```{r}
+crecimiento.pinos = c(0.9144,1.524,0.6096,0.4572,1.0668)
+mean(crecimiento.pinos)
+```
+
+$\hat{\sigma}^2$
+
+`R` ya nos proporciona la varianza muestral con la función `var`
+
+```{r}
+var(crecimiento.pinos)
+```
+
+### Ejercicio 3
+
+Tal como hicimos en el ejercicio 1, estimamos el parámetro $p$ a partir del momento de orden 1 $M_1 = \overline{X}$ donde $\overline{X} = E(X) = \frac{1}{p}$ y por tanto $\hat{p} = \frac{1}{\overline{X}}$
+
+### Ejercicio 4
+
+Mismo caso anterior. Estimamos el parámetro $\lambda$ a partir del momento de orden 1 $M_1 = \overline{X}$ donde $\overline{X} = E(X) = \frac{1}{\lambda}$ y por tanto $\hat{\lambda} = \frac{1}{\overline{X}}$
+
+### Ejercicio 5
+
+Misma idea que los anteriores. El momento de orden 1 de una uniforme es $M_1 = \overline{X}$ donde $\overline{X} = E(X) = \frac{a+b}{2}$ donde $a = b - \frac{1}{4}$. Despejamos $\hat{b}$
+
+$2\hat{b} + \frac{19}{4}= 2\overline{X}$ 
+
+$\hat{b} = \overline{X} - \frac{19}{8}$ por tanto $\hat{a} = \overline{X} - \frac{19}{8} - \frac{1}{4} = \overline{X} - \frac{21}{8}$
+
+### Ejercicio 6
+
+![](/Users/msantamaria/Desktop/6.jpg)
+
+### Ejercicio 7
+
+![](/Users/msantamaria/Desktop/7.jpg)
+
+### Ejercicio 8
+
+![](/Users/msantamaria/Desktop/8.jpg)

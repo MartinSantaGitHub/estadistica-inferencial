@@ -66,8 +66,14 @@ import pandas
 iris_py = r.iris
 iris_py.head()
 
-rows = random.sample(range(0,150),5)
+random.seed(25)
+
+# Sin Repo
+rows = random.sample(range(0,150), k=5)
 rows
+
+# Con Repo
+random.choices(range(0,150), k=5)
 
 iris_py.iloc[rows,:]
 

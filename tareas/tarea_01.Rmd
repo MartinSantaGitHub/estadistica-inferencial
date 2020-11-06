@@ -1,0 +1,122 @@
+---
+title: "Tarea 01"
+author: "Martin Santamaria"
+date: "24/10/2020"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+Sys.setenv(RETICULATE_PYTHON = "/Python38")
+library(reticulate)
+```
+
+### Ejercicio 1
+
+Recordando del curso de Probabilidad, al ser las $X_i$ todas ellas independientes, y $X_i \sim Exp(\lambda)$ 
+
+$f(x_1,x_2,\ldots x_n) = f_{X_1}(x_1)\cdot f_{X_2}(x_2)\cdot \ldots\cdot f_{X_n}(x_n)$ con $f_{X_n}(x_n)=\lambda e^{-\lambda x_n}$
+
+Entonces la función de densidad conjunta será:
+
+$$\begin{array}{rl}
+\left\{
+\begin{array}{ll}
+\lambda^n e^{-\lambda \sum_{i=1}^n x_i} & \mbox{si }x_i>0 \\
+& \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \forall \ i=1,2,\ldots, n\\
+0 & \mbox{si } x_i\leq 0 
+\end{array}
+\right.
+\end{array}$$
+
+### Ejercicio 2
+
+En el primer caso son independientes ya que al tratarse de una MAS (muestra aleatoria simple) es independiente si dividio o tomo la muestra del comienzo, del final o del medio. Para el segundo caso no, ya que yo estoy imponiendo una condición o función y es que los primeros 5 valores deben ser los más pequeños de la muestra total con lo cual dependen de los valores del resto de la muestra y ahi estoy condicionando, por tanto, dependencia de los primeros valores que elijo con respecto a los otros. De manera explícita es como decir "vos, primer valor $x_1$ que vales 1.54 (metros por ejemplo), te elijo **con respecto** a tu compañero $x_2$ que vale 1.65 ya que $x_2$ es mayor que vos". Del ejemplo anterior, queda en evidencia entonces que $x_1$ depende de lo que valen $x_2$ y el resto para ser tomado en cuenta.
+
+### Ejercicio 3
+
+Utilizamos `R` para resolver este ejercicio
+
+```{r}
+# Tamaño de la muestra
+n = 6
+# Muestra
+velocidades = c(190,195,193,177,201,187)
+```
+
+a) $\overline{X}$
+
+```{r}
+mean(velocidades)
+```
+
+b) $\tilde{S}^2$
+
+```{r}
+var(velocidades)
+```
+
+c) Mediana
+
+```{r}
+median(velocidades)
+```
+
+d) $X_{(4)}$
+
+```{r}
+velocidades.ordenadas = sort(velocidades)
+velocidades.ordenadas[4]
+```
+
+### Ejercicio 5
+
+a) Al ser las $X_i$ independientes, y $X_i \sim N(\mu,\sigma)$ 
+
+Función de densidad del mínimo $X_{(1)}$:
+
+$f_{X_1}(x_1)=\frac{1}{\sigma\sqrt{2\pi}}e^{-\frac{(x_1-\mu)^2}{2\sigma^2}}$
+
+Función de densidad del máximo $X_{(1)}$:
+
+$f_{X_n}(x_n)=\frac{1}{(\sigma\sqrt{2\pi})^n}e^{-\frac{\sum_{i=1}^n(x_i-\mu)^2}{2\sigma^2}}$
+
+Si $x_i > 0 \ \ \ \forall \ i=1,2,\ldots, n$
+
+b) Todas ellas son muestras aleatorias de una variable aleatoria normal por tanto siguen una distribución normal.
+
+### Ejercicio 6
+
+a) Si observamos $T$ tiene una distribución normal ¿Por qué?
+
+Pues bien, $T$ se puede escribir como $T = \frac{\overline{X} - \mu}{\frac{\sigma}{\sqrt{n}}}$ y esta expresión no es más que el **Teorma Central del Límite** el cual indica que $T$ converge en Ley a una normal $N(0,1)$ cuando $n$ es grande o tiende a infinito.
+
+b) Por supuesto que $T$ es un estadístico ya que un estadístico es cualquier función de la muestra que se puede simbolizar así:
+
+$g(x_1, x_2, ... ,x_n)$
+
+### Ejercicio 7
+
+Decimos que la variable aleatoria $X$ sigue una distribución $\chi^2$ con $n$ grados de libertad, e indicamos $X \sim \chi_n^2$, si y sólo si $X = Z_1^2 + Z_2^2 + \ ... \ + Z_n^2$ donde $\forall \ i = 1,2,...,n$ es $Z_i \sim N(0,1)$ y son independientes.
+
+En este caso tenemos $n = 10$ grados de libertad. Utilizando `R` calculamos la probabilidad pedida.
+
+```{r}
+pchisq(18.31,df = 10) - pchisq(2.56,df = 10)
+```
+
+### Ejercicio 8
+
+Si $X \sim N(\mu,\sigma)$ y $X_1,...,X_n$ es una muestra aleatoria de $X$, entonces
+
+$\sum_{i=1}^n\left(\frac{x_i-\mu}{\sigma}\right)^2 \sim \chi_n^2$
+
+Por tanto $Y \sim \chi_{10}^2$
+
+Calculamos la probabilidad pedida
+
+```{r}
+pchisq(2.6, df = 10)
+```

@@ -1,0 +1,152 @@
+---
+title: "Tarea 4"
+author: "Martin Santamaria"
+date: "4/11/2020"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Ejercicio 1
+
+Teniendo en cuenta que el intervalo de confianza con $\sigma$ conocida es
+
+$$
+\left(\overline{X} -z_{1-\frac{\alpha}{2}} \frac{\sigma}{\sqrt{n}}, \overline{X}+z_{1-\frac{\alpha}{2}}\frac{\sigma}{\sqrt{n}}
+\right)
+$$
+
+```{r}
+ICZ=function(media,sigma,alpha,n){
+  c(media-qnorm(1-alpha/2)*sigma/sqrt(n), media+qnorm(1-alpha/2)*sigma/sqrt(n))
+  }
+```
+
+El intervalo de confianza, con una confianza del $95$ % para parámetro $\mu$ es
+
+```{r}
+alpha = 0.05
+sigma = 25
+media = 1012
+n = 64
+
+ICZ(media,sigma,alpha,n)
+```
+
+### Ejercicio 2
+
+Teniendo en cuenta que el intervalo de confianza con $\sigma$ desconocida es
+
+$$
+\left( 
+\overline{X}-t_{n-1,1-\frac{\alpha}{2}} \frac{\widetilde{S}_{X}}{\sqrt{n}},
+\overline{X}+t_{n-1,1-\frac{\alpha}{2}}\frac{\widetilde{S}_{X}}{\sqrt{n}} \right).
+$$
+
+```{r}
+ICT=function(media,vm,alpha,n){
+  c(media-qt(1-alpha/2,df = (n-1))*vm/sqrt(n), media+qt(1-alpha/2,df = (n-1))*vm/sqrt(n))
+  }
+```
+
+El intervalo de confianza, con una confianza del $98$ % para parámetro $\mu$ es
+
+```{r}
+alpha = 0.02
+vm = 10.2
+media = 86
+n = 400
+
+ICT(media,vm,alpha,n)
+```
+
+Notemos que $n \ge 100$. Podriamos haber usado también el intervalo que utiliza la normal estandar. Veamos que IC nos hubiese dado como resultado
+
+```{r}
+ICZ(media,vm,alpha,n)
+```
+
+Los resultados obtenidos son practicamente iguales por no decir que son los mismos. Se verifica la sustitución del IC que utiliza una student por el IC que utiliza una normal. 
+
+### Ejercicio 3
+
+Para este caso, y teniendo una muestra, vamos a utilizar la función `t.test` del paquete `stats`. Incluso en este caso no podemos utilizar las funciones anteriores ya que nuestra muestra es pequeña $(n = 4)$
+
+```{r}
+muestra = c(19600,20300,20500,19800)
+
+t.test(muestra, conf.level = 0.95)$conf.int
+```
+
+### Ejercicio 4
+
+Teniendo en cuenta que el intervalo de confianza para la varianza de una población normal es
+
+$$
+\left( \frac{(n-1)\widetilde{S}_{X}^2}{\chi_{n-1,1-\frac{\alpha}{2}}^2},
+\frac{(n-1)\widetilde{S}_{X}^2}{\chi_{n-1,\frac{\alpha}{2}}^2}
+\right),
+$$
+
+```{r}
+ICV = function(vm,alpha,n){
+  df = (n-1)
+  num = df*vm
+  c(num/qchisq(1-alpha/2,df=df),num/qchisq(alpha/2,df=df))
+}
+```
+
+El IC para el parámetro $\sigma^2$ con una confianza del $99$ % es
+
+```{r}
+alpha = 0.01
+n = 10
+vm = 50^2
+
+ICV(vm,alpha,n)
+```
+
+### Ejercicio 5
+
+```{r}
+n = 120
+p.est = 30/120
+n*p.est
+n*(1-p.est)
+```
+
+Como $n$ es grande $(n \ge 100)$, $n\widehat{p}_{X}\geq 10$ y $n(1-\widehat{p}_{X})\geq 10$, podemos usar la fórmula de Laplace. 
+
+$$
+\widehat{p}_{X}\pm z_{1-\alpha/2}\sqrt{\frac{\widehat{p}_{X}
+(1-\widehat{p}_{X})}{n}}.
+$$
+
+```{r}
+ICP = function(p.est,n,alpha = 0.05){
+  sqroot = sqrt((p.est)*(1-p.est)/n)
+  cuantil = qnorm(1-alpha/2)
+  c(p.est-(cuantil*sqroot),p.est+(cuantil*sqroot))
+}
+```
+
+El IC para la proporción $p$ con una confianza del $95$ % es
+
+```{r}
+ICP(p.est,n)
+```
+
+También se puede utilizar la función `binom.approx` del paquete `epitools`
+
+```{r}
+library(epitools)
+
+#binom.exact(30,n,conf.level = 0.95)
+#binom.wilson(30,n,conf.level = 0.95)
+binom.approx(30,n,conf.level = 0.95)
+```
