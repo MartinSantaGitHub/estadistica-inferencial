@@ -1,0 +1,330 @@
+---
+title: "Tarea 6"
+author: "Martin Santamaria"
+date: "9/11/2020"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Ejercicio 1
+
+Se trata de una muestra con varianza conocida y $n = 36$ por tanto se realizará un Z-test. Se quiere verificar si $\mu$ es significativamente menor de $60$ con un nivel de confianza del $95\%$
+
+$$
+\left\{\begin{array}{ll} 
+H_{0}:\mu = 60\\ 
+H_{1}:\mu < 60
+\end{array}
+\right.
+$$
+
+```{r}
+# Datos de la muestra en estudio
+n = 36
+varianza = 144 # Varianza conocida
+media.muestral = 62.5
+alpha = 0.05
+mu_0 = 60
+```
+
+```{r}
+z_0 = (media.muestral - mu_0)/(sqrt(varianza/n))
+error = qnorm(1-alpha)*(sqrt(varianza/n))
+
+# p-valor
+pnorm(z_0)
+
+# Intervalo de confianza
+c(-Inf,media.muestral+error)
+```
+
+Como el $\text{p-valor} > \alpha$ podemos decir que $\mu = 60$ con un nivel de confianza del $95\%$. También nos lo dice el intervalo de confiaza donde $\mu_0 \in (-\infty,65.79)$ con un nivel de significación $\alpha = 0.05$
+
+### Ejercicio 2
+
+Se trata de una muestra con varianza conocida y $n = 100$ por tanto se realizará un Z-test
+
+```{r}
+# Datos de la muestra en estudio
+n = 100
+varianza = 900 # Varianza conocida
+media.muestral = 72.5
+alpha = 0.10
+mu_0 = 70
+
+z_0 = (media.muestral - mu_0)/(sqrt(varianza/n))
+```
+
+a) 
+
+$$
+\left\{\begin{array}{ll} 
+H_{0}:\mu = 70\\ 
+H_{1}:\mu \ne 70
+\end{array}
+\right.
+$$
+
+```{r}
+error = qnorm(1-alpha/2)*(sqrt(varianza/n))
+
+# p-valor
+2*pnorm(abs(z_0),lower.tail = FALSE)
+
+# Intervalo de confianza
+(int.conf = c(media.muestral-error,media.muestral+error))
+```
+
+Como el $\text{p-valor} > \alpha$ podemos decir que $\mu = 70$ con un nivel de confianza del $90\%$. También nos lo dice el intervalo de confiaza donde $\mu_0 \in ($**```r {round(int.conf[1],2)}```**$,$**```r {round(int.conf[2],2)}```**$)$ con un nivel de significación $\alpha = 0.1$
+
+b) 
+
+$$
+\left\{\begin{array}{ll} 
+H_{0}:\mu = 70\\ 
+H_{1}:\mu > 70
+\end{array}
+\right.
+$$
+
+```{r}
+error = qnorm(1-alpha)*(sqrt(varianza/n))
+
+# p-valor
+pnorm(z_0,lower.tail = FALSE)
+
+# Intervalo de confianza
+(int.conf = c(media.muestral-error,Inf))
+```
+
+Como el $\text{p-valor} > \alpha$ podemos decir que $\mu = 70$ con un nivel de confianza del $90\%$. También nos lo dice el intervalo de confiaza donde $\mu_0 \in ($**```r {round(int.conf[1],2)}```**$,$ **$\infty$**$)$ con un nivel de significación $\alpha = 0.1$
+
+c) 
+
+$$
+\left\{\begin{array}{ll} 
+H_{0}:\mu = 70\\ 
+H_{1}:\mu < 70
+\end{array}
+\right.
+$$
+
+```{r}
+error = qnorm(1-alpha)*(sqrt(varianza/n))
+
+# p-valor
+pnorm(z_0)
+
+# Intervalo de confianza
+(int.conf = c(-Inf,media.muestral+error))
+```
+
+Como el $\text{p-valor} > \alpha$ podemos decir que $\mu = 70$ con un nivel de confianza del $90\%$. También nos lo dice el intervalo de confiaza donde $\mu_0 \in ($ **$-\infty$**$,$**```r {round(int.conf[2],2)}```**$)$ con un nivel de significación $\alpha = 0.1$
+
+En los tres casos, dada la evidencia obtenida, hemos aceptado la hipótesis $H_0$ rechazando la hipótesis alternativa $H_1$
+
+### Ejercicio 3
+
+Siendo $Z=\dfrac{\overline{X}-\mu_0}{{\sigma}/{\sqrt{n}}}$
+
+Tenemos que ver los casos donde
+
+$Z<z_{\frac{\alpha}2}$ y $Z>z_{1-\frac{\alpha}2}$
+
+Y despejar $\overline{X}$ en ambos casos
+
+```{r}
+n = 64
+mu_0 = 70
+sigma.2 = 16^2
+alpha = 0.01
+z.alpha.medios = qnorm(alpha/2)
+z.1.menos.alpha.medios = qnorm(1-alpha/2)
+(media.muestral.L = z.alpha.medios * sqrt(sigma.2/n) + mu_0)
+(media.muestral.U = z.1.menos.alpha.medios * sqrt(sigma.2/n) + mu_0)
+```
+
+Así tenemos que para $\overline{x} \in (-\infty,$**```r {round(media.muestral.L,2)}```**$)\cup($**```r {round(media.muestral.U,2)}```**$,+\infty)$ estaríamos en la zona de rechazo y por tanto rechazaríamos la hipótesis nula $H_0$ con un nivel de significación $\alpha = 0.01$
+
+### Ejercicio 4
+
+```{r}
+# Datos de la muestra en estudio
+n = 1600
+varianza = 2000^2 # Varianza conocida
+media.muestral = 45000
+alpha = 0.01
+mu_0 = 43500
+```
+
+Planteamos las hipótesis
+
+$$
+\left\{\begin{array}{ll} 
+H_{0}:\mu = 43500\\ 
+H_{1}:\mu \ne 43500
+\end{array}
+\right.
+$$
+
+```{r}
+z_0 = (media.muestral - mu_0)/(sqrt(varianza/n))
+error = qnorm(1-alpha/2)*(sqrt(varianza/n))
+
+# p-valor
+2*pnorm(abs(z_0),lower.tail = FALSE)
+
+# Intervalo de confianza
+(int.conf = c(media.muestral-error,media.muestral+error))
+```
+
+El $\text{p-valor} < \alpha$, por tanto rechazamos $H_0$ y nos quedamos con la hipótesis alternativa $H_1$. El intervalo de confianza nos muestra lo mismo, donde $\mu_0 \notin ($**```r {toString(round(int.conf[1],2))}```**$,$**```r {toString(round(int.conf[2],2))}```**$)$
+
+### Ejercicio 5
+
+Realizamos cada Z-test en particular
+
+1) 
+
+$$
+\left\{\begin{array}{ll} 
+H_{0}:\mu = 44000\\ 
+H_{1}:\mu > 44000
+\end{array}
+\right.
+$$
+
+```{r}
+mu_0 = 44000
+z_0 = (media.muestral - mu_0)/(sqrt(varianza/n))
+
+# p-valor
+pnorm(z_0,lower.tail = FALSE)
+```
+
+El $\text{p-valor} < \alpha$, por tanto rechazamos $H_0$ y nos quedamos con la hipótesis alternativa $H_1$. El intervalo de confianza nos muestra lo mismo, donde $\mu_0 \notin ($**```r {toString(round(int.conf[1],2))}```**$,$**```r {toString(int.conf[2])}```**$)$
+
+2) 
+
+$$
+\left\{\begin{array}{ll} 
+H_{0}:\mu = 46250\\ 
+H_{1}:\mu > 46250
+\end{array}
+\right.
+$$
+
+```{r}
+mu_0 = 46250
+z_0 = (media.muestral - mu_0)/(sqrt(varianza/n))
+error = qnorm(1-alpha)*(sqrt(varianza/n))
+
+# p-valor
+pnorm(z_0,lower.tail = FALSE)
+
+# Intervalo de confianza
+(int.conf = c(media.muestral-error,Inf))
+```
+
+Como el $\text{p-valor} > \alpha$ podemos decir que $\mu = 46250$ y aceptamos la hipótesis nula $H_0$ con un nivel de confianza del $99\%$. También nos lo dice el intervalo de confiaza donde $\mu_0 \in ($**```r {toString(round(int.conf[1],2))}```**$,$**```r {toString(int.conf[2])}```**$)$ con un nivel de significación $\alpha = 0.01$
+
+### Ejercicio 6
+
+Tenemos una muestra grande ($n \ge 40$) pero vamos a realizar de todos modos un T-test para este caso dado que no conocemos $\sigma$. Recordemos
+
+$$T= \frac{\overline{X}-\mu_0}{\frac{\widetilde{S}_X}{\sqrt{n}}} \sim t_{n-1}$$
+
+```{r}
+n = 100
+media.muestral = 0.978
+desviacion.muestral = 0.10
+alpha = 0.05
+mu_0 = 1
+```
+
+1)
+
+$$
+\left\{\begin{array}{ll} 
+H_{0}:\mu = 1\\ 
+H_{1}:\mu \ne 1
+\end{array}
+\right.
+$$
+
+```{r}
+t_0 = (media.muestral - mu_0)/(desviacion.muestral/sqrt(n))
+error = qt(1-alpha/2,df=n-1)*(desviacion.muestral/sqrt(n))
+
+# p-valor
+2*pt(abs(t_0),df=n-1,lower.tail = FALSE)
+
+# Intervalo de confianza
+(int.conf = c(media.muestral-error,media.muestral+error))
+```
+
+Las evidencias nos indican que debemos rechazar $H_0$ e inclinarnos por $H_1$ dado que $\text{p-valor} < \alpha$ y $\mu_0 \notin ($**```r {toString(round(int.conf[1],3))}```**$,$**```r {toString(round(int.conf[2],3))}```**$)$. El valor del $\text{p-valor}$ es muy cercano al establecido en $\alpha = 0.05$. $\mu$ no es muy diferente o distante de 1. Veamos el segundo caso, pero antes veamos que resultados hubiesemos obtenido si en vez de realizar un T-Test, hubiesemos hecho un Z-test dado que $n$ es grande ($n \ge 40$).
+
+```{r}
+error = qnorm(1-alpha/2)*(desviacion.muestral/sqrt(n))
+
+# p-valor
+2*pnorm(abs(t_0),lower.tail = FALSE)
+
+# Intervalo de confianza
+(int.conf = c(media.muestral-error,media.muestral+error))
+```
+
+Como vemos, el $\text{p-valor}$ está muy cercano al $\text{p-valor}$ calculado anteriormente y los extremos del intervalo de confianza coinciden hasta la tercera cifra decimal. Se justifica la aplicación de un Z-test cuando $n$ es grande. 
+
+Pasemos al segundo caso
+
+2)
+
+$$
+\left\{\begin{array}{ll} 
+H_{0}:\mu = 1\\ 
+H_{1}:\mu > 1
+\end{array}
+\right.
+$$
+
+```{r}
+error = qt(1-alpha,df=n-1)*(desviacion.muestral/sqrt(n))
+
+# p-valor
+pt(t_0,df=n-1,lower.tail = FALSE)
+
+# Intervalo de confianza
+(int.conf = c(media.muestral-error,Inf))
+```
+
+Como el $\text{p-valor} > \alpha$ podemos decir que $\mu = 1$ con un nivel de confianza del $95\%$. También nos lo dice el intervalo de confiaza donde $\mu_0 \in ($**```r {toString(round(int.conf[1],2))}```**$,$**```r {toString(int.conf[2])}```**$)$ con un nivel de significación $\alpha = 0.05$
+
+¿Y si hubiesemos considerado el otro caso donde $\mu_0 < 1$? Veamoslo
+
+3)
+
+$$
+\left\{\begin{array}{ll} 
+H_{0}:\mu = 1\\ 
+H_{1}:\mu < 1
+\end{array}
+\right.
+$$
+
+```{r}
+# p-valor
+pt(t_0,df=n-1)
+
+# Intervalo de confianza
+(int.conf = c(-Inf,media.muestral+error))
+```
+
+De nuevo, las evidencias nos indican que debemos rechazar $H_0$ e inclinarnos por $H_1$ dado que $\text{p-valor} < \alpha$ y $\mu_0 \notin ($**```r {toString(int.conf[1])}```**$,$**```r {toString(round(int.conf[2],3))}```**$)$.
