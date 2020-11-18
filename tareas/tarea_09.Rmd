@@ -1,0 +1,353 @@
+---
+title: "Tarea 9"
+author: "Martin Santamaria"
+date: "16/11/2020"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Ejercicio 1
+
+![](C:\Users\msantamaria\Desktop\Tarea 1\1.jpg){align="top" width="500px"}
+
+```{r}
+frecuencias.empiricas = c(74,120,83,135,88)
+probabilidades.esperadas = c(6/36,9/36,6/36,9/36,6/36)
+
+chisq.test(frecuencias.empiricas,p=probabilidades.esperadas)
+```
+
+El p-valor obtenido nos da evidencia para aceptar la hipótesis nula y por tanto considerar que los dados están equilibrados.
+
+### Ejercicio 2
+
+Definimos los extremos de los intervalos que contendrán los números de días
+
+```{r}
+extremos.izquierdos = c(0,1.5,2.5,3.5,5.5,9.5,14.5,30.5)
+extremos.derechos = c(1.5,2.5,3.5,5.5,9.5,14.5,30.5,+Inf)
+
+intervalos = matrix(c(extremos.izquierdos,extremos.derechos),byrow = TRUE,nrow = 2)
+intervalos
+```
+
+Los intervalos están definidos por columna. Realizamos el test de la Chi-Cuadrado
+
+```{r}
+frecuencias.empiricas = c(89,152,105,165,221,124,106,38)
+probabilidades.esperadas = pchisq(intervalos[2,],df=4) - pchisq(intervalos[1,],df=4)
+
+chisq.test(frecuencias.empiricas,p=probabilidades.esperadas)
+```
+
+El test de la Chi-Cuadrado nos avisa que puede ser incorrecto. Fijemosno cuales son las frecuencias esperadas menores que 5.
+
+```{r}
+n = sum(frecuencias.empiricas)
+frecuencias.esperadas = n*probabilidades.esperadas
+
+which(frecuencias.esperadas < 5)
+```
+
+Se trata de la última, por tanto juntamos los dos últimos intervalos
+
+```{r}
+extremos.izquierdos.2 = c(0,1.5,2.5,3.5,5.5,9.5,14.5)
+extremos.derechos.2 = c(1.5,2.5,3.5,5.5,9.5,14.5,+Inf)
+
+intervalos.2 = intervalos[,-ncol(intervalos)]
+intervalos.2[2,ncol(intervalos.2)] = Inf
+intervalos.2
+```
+
+Realizamos nuevamente el test de la Chi-Cuadrado
+
+```{r}
+frecuencias.empiricas.2 = c(frecuencias.empiricas[1:6],sum(frecuencias.empiricas[7:8]))
+probabilidades.esperadas.2 = pchisq(intervalos.2[2,],df=4) - pchisq(intervalos.2[1,],df=4)
+
+chisq.test(frecuencias.empiricas.2,p=probabilidades.esperadas.2)
+```
+
+El valor tan bajo del p-valor obtenido nos da evidencias para rechazar que los datos provengan de una distribución $\chi^2$ con $4$ grados de libertad. También se pudo haber calculado simulando el p-valor en el test de la Chi-Cuadrado con los datos originales
+
+```{r}
+chisq.test(frecuencias.empiricas,p=probabilidades.esperadas,simulate.p.value = TRUE, B = 2000)
+```
+
+Exceptuando el estadístico de contraste que es diferente y los grados de libertad, que en este caso el test no nos lo da, vemos que, a pesar de que el p-valor obtenido sea diferente, la conclusión es la misma. Optamos por rechazar que los datos provengan de una distribución $\chi^2$ con $4$ grados de libertad. 
+Por último, una aclaración, es que **no** podemos realizar un test de **Kolmogorov-Smirnov** a pesar de que la variable aleatoria a constrastar es continua (una $\chi^2$) debido a que la muestra tiene gran cantidad de valores repetidos. 
+
+### Ejercicio 3
+
+Primero que nada, ¿cuales son las características de nuestra muestra? Pues bien, es una muestra grande y de valores duplicados. Armamos la siguiente tabla con los intervalos de los datos y una muestra que generamos a partir de esos intervalos para poder estimar los valores de $\mu$ y $\sigma$ dado que no los conocemos.
+
+```{r}
+frecuencias.empiricas = c(8,38,45,9)
+extremos.izquierdos = c(-Inf,90.5,110.5,130.5)
+extremos.derechos = c(90.5,110.5,130.5,150)
+
+intervalos = matrix(c(extremos.izquierdos,extremos.derechos),byrow = TRUE,nrow = 2)
+intervalos
+
+muestra = rep(c(80.5,100.5,120.5,140.25),frecuencias.empiricas)
+mu = mean(muestra)
+sigma = sd(muestra)
+
+probabilidades.esperadas = pnorm(intervalos[2,],mu,sigma) - pnorm(intervalos[1,],mu,sigma)
+sum(probabilidades.esperadas)
+```
+
+Un detalle de las probabilidades teóricas es que no suman en total 1. Por tanto vamos a modificar el extremo del último intervalo ya que la normal va de menos infinito a infinito en todo su dominio.
+
+```{r}
+intervalos[2,4] = Inf
+probabilidades.esperadas = pnorm(intervalos[2,],mu,sigma) - pnorm(intervalos[1,],mu,sigma)
+sum(probabilidades.esperadas)
+```
+
+Vemos que ahora la suma del vector de probabilidades nos da 1 como corresponde. Procedamos a realizar un primer test a ver que resultados nos arroja
+
+```{r}
+test.chi2 = chisq.test(frecuencias.empiricas,p=probabilidades.esperadas)
+test.chi2
+```
+
+Este test es incorrecto ¿Por que? Si observamos los grados de libertad que nos devuelve son 3 mientras que, al haber estimado 2 parámetros ($\mu$ y $\sigma$), el grado de libertad correcto debería ser 1. Tomamos el estadístico de contraste devuelto y lo utilizamos para hallar el p-valor
+
+```{r}
+p.valor = pchisq(test.chi2$statistic,df=1,lower.tail=FALSE)
+p.valor
+```
+
+A pesar de haber obtenido un p-valor más pequeño que el anterior (la mitad aproximadamente del valor anterior), dicho valor nos da evidencia de que las calificaciones obtenidas siguen una distribución normal. Hagamos un último test para darle mayor peso a nuestra evidencia. La muestra se ajusta perfectamente para el test de la normalidad de **Omnibus de D’Agostino-Pearson** ya que tiene un tamaño mayor a 20 y a su vez hay valores repetidos
+
+```{r}
+library(fBasics)
+
+n = sum(frecuencias.empiricas)
+
+if(n >= 20){
+  dagoTest(muestra)
+}
+```
+
+Los p-valores obtenidos junto con el test de la Chi-Cuadrado anterior nos dan evidencias suficientes para aceptar que las calificaciones siguen la distribución normal. Antes de terminar el ejercicio, quiero agregar un par de cosas. Veamos como se comportan los test de **Lilliefors**, **Anderson-Darling** y **Shapiro-Wilk** con nuestros datos
+
+```{r}
+library(nortest)
+
+lillie.test(muestra)
+ad.test(muestra)
+shapiro.test(muestra)
+```
+
+Los p-valores obtenidos nos sugieren rechazar la hipótesis nula. Pero, es que estos datos no encajan para estos test. Por un lado la muestra es muy grande (> 20) y por otro, tiene gran cantidad de datos duplicados. A continuación, un par de gráficos para ver el ajuste de nuestros datos a una normal
+
+```{r}
+x=seq(from=79.5,to=150.5,by=0.01)
+hist(muestra,freq = FALSE,ylim = c(0,0.05),main = "Histograma de la muestra")
+lines(density(muestra),main="Estimación de la densidad")
+lines(x,dnorm(x,mean=mu,sd=sigma),col="red")
+```
+
+Como vemos, los gráficos si bien son una herramienta inicial aproximada al estudio de los datos, no nos sirven de mucho para contrastar la distribución de los mismos. Los gráficos obtenidos son muy vagos como para considerar que las calificaciones siguen una normal. Veamos el resultado de hacer un **qqPlot**
+
+```{r}
+library(car)
+
+qqPlot(muestra,distribution = "norm", mean=mu,sd=sigma, id = FALSE)
+```
+
+No es una buena herramienta hacer un qqplot, en este caso, debido a que tenemos gran cantidad de datos duplicados.
+
+### Ejercicio 4
+
+Armamos primero la tabla de intervalos junto con las frecuencias empíricas
+
+```{r}
+frecuencias.empiricas = c(0,0,0,0)
+muestra = c(0.479,0.889,0.216,0.596,0.359,0.347,0.646,0.359,0.991,0.227,
+            0.774,0.760,0.448,0.992,0.742,0.402,0.049,0.213,0.296,0.711)
+
+for (x in muestra){
+  if (x > 0 && x <= 0.25){
+    frecuencias.empiricas[1] = frecuencias.empiricas[1] + 1
+  }else if (x > 0.25 && x <= 0.50){
+    frecuencias.empiricas[2] = frecuencias.empiricas[2] + 1
+  }else if (x > 0.50 && x <= 0.75){
+    frecuencias.empiricas[3] = frecuencias.empiricas[3] + 1
+  }else if (x > 0.75 && x <= 1){
+    frecuencias.empiricas[4] = frecuencias.empiricas[4] + 1
+  }
+}
+
+frecuencias.empiricas
+
+extremos.izquierdos = c(0,0.25,0.50,0.75)
+extremos.derechos = c(0.25,0.50,0.75,1)
+
+intervalos = matrix(c(extremos.izquierdos,extremos.derechos),byrow = TRUE,nrow = 2)
+intervalos
+
+probabilidades.esperadas = punif(intervalos[2,]) - punif(intervalos[1,])
+
+chisq.test(frecuencias.empiricas,p=probabilidades.esperadas)
+```
+
+El p-valor obtenido nos brinda evidencias para aceptar que los datos de la muestra siguen una $U[0,1]$. Probemos ahora el test de **Kolmogorov-Smirnov** dado que se trata de una variable aleatoria continua
+
+```{r}
+ks.test(muestra,"punif",min=0,max=1)
+```
+
+R nos está indicando que no deberían haber datos duplicados en la muestra y de hecho es una regla para la utilización de este tipo de test. Veamos cuantos datos duplicados tenemos en nuestra muestra
+
+```{r}
+table(duplicated(muestra))[2]
+```
+
+Es solamente un valor. Podemos eliminarlo ya que no afectará demasiado al tamaño de la muestra siendo solo uno
+
+```{r}
+ks.test(muestra[!duplicated(muestra)],"punif",min=0,max=1)
+```
+
+Esta vez, R no nos muestra el mensaje de advertencia de datos duplicados. El p-valor, al igual que el de la Chi-Cuadrado, nos brinda evidencias para aceptar que $X \sim U[0,1]$.
+
+### Ejercicio 5
+
+Este ejercicio es muy similar al anterior. Integrando la función de densidad de $X$ obtenemos la correspondiente función de distribución
+
+$$
+F(x)=
+\left\{\begin{array}{ll}
+\frac{x^2}{2}+x, & \text{si $x\in [-1,0],$}\\ x-\frac{x^2}{2}, & \text{si
+$x\in [0,1],$}\\
+0, & \text{en caso contrario.} 
+\end{array}\right.
+$$
+
+Hacemos lo mismo que hicimos en el ejercicio anterior para obtener la tabla de intervalos junto con las frecuencias empíricas
+
+```{r}
+frecuencias.empiricas = c(0,0,0,0,0,0,0,0)
+muestra = c(0.183, 0.647, 0.148, -0.143, -0.625, 0.858, -0.177, 0.350,
+           -0.188, -0.059, 0.845, 0.031, -0.156, 0.564, -0.235, 0.237,
+            0.294, -0.257, 0.110, 0.478, 0.647, 0.276, -0.528, -0.075,
+           -0.498, 0.395, -0.163, -0.075, -0.623, 0.053, -0.647, 0.348,
+           -0.795, -0.132, -0.381, -0.017, -0.227, 0.277, 0.590, -0.832)
+
+px = function(x,min,max){
+  sapply(x,function(x){
+    if (x >= min & x < 0){
+      ((x^2)/2)+x;
+      #(x+1)^2/2
+    } else if (x >= 0 & x <= max){
+      x-((x^2)/2);
+      #-x^2/2+x+1/2
+    } else {
+      0;
+    }
+  });
+}
+
+# px = function(x,min,max){
+#   return(ifelse(x< min,0,ifelse(x<=0,(x+1)^2/2,ifelse(x<=max,-x^2/2+x+1/2,1))))
+# }
+
+for (x in muestra){
+  if (x >= -1 && x <= -0.75){
+    frecuencias.empiricas[1] = frecuencias.empiricas[1] + 1
+  }else if (x > -0.75 && x <= -0.50){
+    frecuencias.empiricas[2] = frecuencias.empiricas[2] + 1
+  }else if (x > -0.50 && x <= -0.25){
+    frecuencias.empiricas[3] = frecuencias.empiricas[3] + 1
+  }else if (x > -0.25 && x <= 0){
+    frecuencias.empiricas[4] = frecuencias.empiricas[4] + 1
+  }else if (x > 0 && x <= 0.25){
+    frecuencias.empiricas[5] = frecuencias.empiricas[5] + 1
+  }else if (x > 0.25 && x <= 0.50){
+    frecuencias.empiricas[6] = frecuencias.empiricas[6] + 1
+  }else if (x > 0.50 && x <= 0.75){
+    frecuencias.empiricas[7] = frecuencias.empiricas[7] + 1
+  }else if (x > 0.75 && x <= 1){
+    frecuencias.empiricas[8] = frecuencias.empiricas[8] + 1
+  }
+}
+
+# for (i in 1:length(extremos.izquierda)){
+#   frecuencias.empiricas=c(frecuencias.empiricas,length(muestra.x[muestra.x>=extremos.izquierda[i] &
+#   muestra.x< extremos.derecha[i]]))
+# }
+
+frecuencias.empiricas
+
+extremos.izquierdos = c(-1,-0.75,-0.50,-0.25,0,0.25,0.50,0.75)
+extremos.derechos = c(-0.75,-0.50,-0.25,0,0.25,0.50,0.75,1)
+
+intervalos = matrix(c(extremos.izquierdos,extremos.derechos),byrow = TRUE,nrow = 2)
+intervalos
+
+probabilidades.esperadas = px(intervalos[2,],min=-1,max=1) - px(intervalos[1,],min=-1,max=1)
+```
+
+```{r}
+chisq.test(frecuencias.empiricas,p=probabilidades.esperadas)
+```
+
+Volvemos a ver el mensaje de que el test de la Chi-Cuadrado puede ser incorrecto. Fijemosno cuales son las frecuencias esperadas menores que 5.
+
+```{r}
+n = sum(frecuencias.empiricas)
+frecuencias.esperadas = n*probabilidades.esperadas
+
+which(frecuencias.esperadas < 5)
+```
+
+Son las dos primeras y las dos últimas. Juntamos dichos intervalos
+
+```{r}
+extremos.izquierdos.2 = c(-1,-0.50,-0.25,0,0.25,0.50)
+extremos.derechos.2 = c(-0.50,-0.25,0,0.25,0.50,1)
+
+intervalos.2 = matrix(c(extremos.izquierdos.2,extremos.derechos.2),byrow = TRUE,nrow = 2)
+intervalos.2
+```
+
+Realizamos nuevamente el test de la Chi-Cuadrado
+
+```{r}
+frecuencias.empiricas.2 = c(sum(frecuencias.empiricas[1:2]),frecuencias.empiricas[3:6],sum(frecuencias.empiricas[7:8]))
+probabilidades.esperadas.2 = px(intervalos.2[2,],min=-1,max=1) - px(intervalos.2[1,],min=-1,max=1)
+
+chisq.test(frecuencias.empiricas.2,p=probabilidades.esperadas.2)
+```
+
+El p-valor obtenido nos da evidencias para quedarnos con la hipótesis nula y aceptar que los datos de la muestra siguen la distribución de $X$. También se pudo haber calculado simulando el p-valor en el test de la Chi-Cuadrado con los datos originales
+
+```{r}
+chisq.test(frecuencias.empiricas,p=probabilidades.esperadas,simulate.p.value = TRUE, B = 2000)
+```
+
+El p-valor obtenido nos afirma lo dicho anteriormente. Por último ¿Que pasaría si realizamos un test de **Kolmogorov-Smirnov**? Primero contemos cuantos valores duplicados hay
+
+```{r}
+table(duplicated(muestra))[2]
+```
+
+Solamente hay dos valores. Podemos eliminarlos sin afectar al resultado del test
+
+```{r}
+ks.test(muestra[!duplicated(muestra)],"px",min=-1,max=1)
+```
+
+Ahora observemos el p-valor ¿Por que dió tan bajo? Si bien la muestra es grande de tamaño 40, hay una condición que no se cumple para poder utilizarlo y es que si recordamos no todas las **frecuencias esperadas** de nuestra muestra eran mayores que 5 y por eso tuvimos que juntar intervalos. Por tanto, en este caso no podemos usar este test para corroborar la distribución de los datos.
+
+Antes de terminar con esta tarea, quiero mencionar que hice mucho énfasis en la utilización de varios test a la hora de estimar la distribución que siguen los datos de una muestra debido a que no hay tests infalibles. Muchas veces el mejor test resulta que no es el mejor y conviene apoyarse de otros test junto con algún gráfico que afirme o dé valor a la estimación que estamos realizando. Es lo mismo cuando realizabamos un contraste de hipótesis paramétrico y acompañabamos al resultado del p-valor junto con un intervalo de confianza para dar mayor veracidad a la afirmación que estabamos realizando.

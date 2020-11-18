@@ -1,0 +1,179 @@
+---
+title: "Tarea 7"
+author: "Martin Santamaria"
+date: "13/11/2020"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library("faraway")
+library("nortest")
+library("car")
+library(tidyverse)
+```
+
+### Ejercicio 1
+
+1) Planteamos las hipótesis
+
+$$
+\left\{\begin{array}{ll} 
+H_{0}:\mu = 5.5\\ 
+H_{1}:\mu \ne 5.5
+\end{array}
+\right.
+$$
+
+```{r}
+resumen1=iris %>% summarise(Media_muestral_Sepal.Length=mean(Sepal.Length),Desviacion_muestral_Sepal.Length=sd(Sepal.Length))
+
+set.seed(333)# por reproducibilidad, para fijar la muestra
+
+muestra_50 = sample(iris$Sepal.Length,size=50,replace = TRUE)
+
+media.poblacional.real = resumen1$Media_muestral_Sepal.Length
+media.poblacional.teorica = 5.5
+
+student.test = t.test(x = muestra_50, mu = media.poblacional.teorica, alternative = "two.sided", conf.level = 0.95)
+student.test
+media.poblacional.real
+```
+
+La evidencia nos indica con un $\text{p-valor} < \alpha = 0.05$ que debemos rechazar la hipótesis nula $H_0$. El intervalo de confianza también nos muestra que $`r media.poblacional.teorica` \notin (`r round(student.test$conf.int[1],2)`,`r round(student.test$conf.int[2],2)`)$. Y claramente se observa dado el valor real de $\mu = `r round(media.poblacional.real,2)`$. Por tanto nos quedamos con la hipótesis alternativa $H_1: \mu \ne `r media.poblacional.teorica`$ 
+
+2) El intervalo de confianza del tipo $(-\infty, x_0)$ al $95\%$ de confianza es
+
+```{r}
+t.test(x = muestra_50, mu = media.poblacional.teorica, alternative = "less", conf.level = 0.95)$conf.int
+```
+
+### Ejercicio 2
+
+```{r}
+Sepalo_mayor_5=prop.table(table(iris$Sepal.Length>5))["TRUE"]
+Sepalo_mayor_5
+
+set.seed(44)
+muestra_30=sample(iris$Sepal.Length,size=30,replace = TRUE)
+x=table(muestra_30>5)["TRUE"]
+x
+
+phat=as.numeric(prop.table(table(muestra_30>5))["TRUE"])
+phat
+```
+
+1) Planteamos las hipótesis
+
+$$
+\left\{\begin{array}{ll} 
+H_{0}: p = 0.75\\ 
+H_{1}: p > 0.75
+\end{array}
+\right.
+$$
+
+```{r}
+n = 30
+p = 0.75
+
+exact = binom.test(x, n, p = p, alternative = "greater", conf.level = 0.95)
+aprox = prop.test(x, n, p = p, alternative = "greater", conf.level = 0.95)
+
+exact
+aprox
+```
+
+Dado que $\text{p-valor} > \alpha = 0.05$ no podemos rechazar la hipótesis nula y tenemos evidencia que $p > 0.75$. 
+
+2) 
+
+```{r}
+exact$conf.int
+aprox$conf.int
+```
+
+La fórmula que se utiliza para el intervalo de confianza del test exacto es la de **Clopper-Pearson** mientras que la que se utiliza para el intervalo de confianza del test aproximado es la de **Wilson**.
+
+3)
+
+Para el test exacto tenemos que
+
+```{r}
+exact$statistic
+exact$p.value
+```
+
+Y para el test aproximado tenemos que
+
+```{r}
+aprox$statistic
+aprox$p.value
+```
+
+### Ejercicio 3
+
+Se tratan de muestras independientes no apareadas al tratarse de muestras de zonas independientes (el fondo y la superficie de la botella). El problema es que no conocemos las varianzas poblacionales ni tampoco si las desviaciones típicas son iguales o no. Haremos primero un test de la varianza para estimar la igualdad o desigualdad de las varianzas. Como nos indican que los datos siguen una distribución normal, no recurriremos al test **no** paramétrico de **Fligner-Killeen** sino que utilizaremos el test de la varianza para datos que siguen una normal.
+
+Consideramos las hipótesis
+
+$$
+\left\{\begin{array}{ll} 
+H_{0}: \sigma_{fondo} = \sigma_{superficie}\\ 
+H_{1}: \sigma_{fondo} \ne \sigma_{superficie}
+\end{array}
+\right.
+$$
+
+```{r}
+x = read.table("zinc.txt",header = TRUE, sep = "\t")
+
+var.test(x$bottom,x$surface,alternative = "two.sided",conf.level = 0.95)
+```
+
+Observamos un $\text{p-valor} > \alpha = 0.05$, de hecho es un valor bastante alto, por tanto afirmamos que $\sigma_{fondo} = \sigma_{superficie}$ aceptando la hipótesis $H_0$ con un nivel de significación $\alpha = 0.05$. Con esta afirmación, consideramos las siguientes hipótesis
+
+$$
+\left\{\begin{array}{ll} 
+H_{0}: \mu_{fondo} = \mu_{superficie}\\ 
+H_{1}: \mu_{fondo} > \mu_{superficie}
+\end{array}
+\right.
+$$
+Dado que $\sigma_{fondo} = \sigma_{superficie}$ el estadístico de constraste es 
+
+$$
+T=\frac{\overline{X}_1-\overline{X}_2}
+{\sqrt{(\frac1{n_1}+\frac1{n_2})\cdot 
+\frac{((n_1-1)\widetilde{S}_1^2+(n_2-1)\widetilde{S}_2^2)}
+{(n_1+n_2-2)}}}
+$$
+
+Donde $T \sim t_{n_1+n_2-2}$ cuando $H_0$ es cierta.
+
+Procedemos con el test correspondiente
+
+```{r}
+media.test = t.test(x$bottom,x$surface,alternative = "greater", var.equal = TRUE, conf.level = 0.95)
+media.test
+```
+
+Observamos con un $\text{p-valor} > \alpha = 0.05$ que no hay evidencias para rechazar la hipótesis nula e incluso con el intervalo de confianza donde $0 \in (`r round(media.test$conf.int[1],2)`,`r round(media.test$conf.int[2],2)`)$, por tanto aceptamos que $\mu_{fondo} = \mu_{superficie}$ con un nivel de significación $\alpha = 0.05$
+
+### Ejercicio 4
+
+Ya se ha resuelto en el ejercicio anterior.
+
+### Ejercicio 5
+
+Como vimos, el intervalo de confianza es
+
+```{r}
+int.conf = c(round(media.test$conf.int[1],2),round(media.test$conf.int[2],2))
+int.conf
+```
+
+Por tanto la región crítica es $(-\infty,`r int.conf[1]`)$ y la región de aceptación es $(`r int.conf[1]`,`r int.conf[2]`)$

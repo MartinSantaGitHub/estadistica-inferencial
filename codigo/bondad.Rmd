@@ -1,0 +1,119 @@
+---
+title: "Bondad De Ajuste"
+author: "Martin Santamaria"
+date: "15/11/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+Sys.setenv(RETICULATE_PYTHON = "/Python38")
+library(reticulate)
+```
+
+```{r}
+muestra=iris$Sepal.Width
+plot(density(muestra),main="Estimación de la densidad")
+x=seq(from=1,to=5,by=0.01)
+mu=mean(iris$Sepal.Width)
+sigma=sd(iris$Sepal.Width)
+lines(x,dnorm(x,mean=mu,sd=sigma),col="red")
+```
+
+```{r}
+library(car)
+qqPlot(iris$Sepal.Width,distribution = "norm", mean=mu,sd=sigma)
+```
+
+```{r}
+set.seed(2020)  # fijamos la semilla de aleatorización
+muestra.flores = sample(iris$Species,10)
+chisq.test(table(muestra.flores))
+chisq.test(table(muestra.flores), simulate.p.value = TRUE, B=2000)
+```
+
+```{r}
+extremos.izquierdos = c(-Inf,1.95,2.45,2.95,3.45,3.95,4.45)
+extremos.derechos = c(1.95,2.45,2.95,3.45,3.95,4.45,Inf)
+frecuencias.empiricas = c(2,1,4,15,10,5,3)
+n=sum(frecuencias.empiricas)
+
+mu=3.5; sigma=0.7;
+probabilidades.teoricas = pnorm(extremos.derechos,mu,sigma)-pnorm(extremos.izquierdos,mu,sigma)
+frecuencias.teoricas = n*probabilidades.teoricas
+round(frecuencias.teoricas,2)
+
+chisq.test(frecuencias.empiricas,p=probabilidades.teoricas)
+
+## Ajuste
+
+extremos.izquierdos2=extremos.izquierdos[c(1,4,5,6)]
+extremos.derechos2 = extremos.derechos[c(3,4,5,7)]
+frecuencias.empiricas2 = c(sum(frecuencias.empiricas[1:3]),
+                           frecuencias.empiricas[4:5],
+                           sum(frecuencias.empiricas[6:7]))
+probabilidades.teoricas2 =pnorm(extremos.derechos2,mu,sigma)-pnorm(extremos.izquierdos2,mu,sigma)
+frecuencias.teoricas2 = n*probabilidades.teoricas2
+
+chisq.test(frecuencias.empiricas2,p=probabilidades.teoricas2)
+chisq.test(frecuencias.empiricas,p=probabilidades.teoricas,simulate.p.value = TRUE,B=2000)
+```
+
+```{r}
+frecuencias.empiricas = c(229,211,93,35,8);
+estimacion.lambda = (211+93*2+35*3+7*4+1*5)/(229+211+93+35+7+1);
+probabilidades.esperadas = c(dpois(0,estimacion.lambda),dpois(1,estimacion.lambda),
+                             dpois(2,estimacion.lambda),dpois(3,estimacion.lambda),
+                             1-ppois(3,estimacion.lambda));
+
+test.chi2=chisq.test(frecuencias.empiricas,p=probabilidades.esperadas)
+pchisq(test.chi2[[1]],3,lower.tail=FALSE)
+```
+
+### Kolmogorov
+
+```{r}
+muestra=c(5.84,4.57,1.34,3.58,1.54,2.25)
+(muestra.ordenada = sort(muestra))
+
+ks.test(muestra,"pnorm",mean=3,sd=1.5)
+```
+
+## Tests de Normalidad
+
+### Kolmogorov - Lilliefors
+
+```{r}
+library(nortest)
+
+lillie.test(muestra)
+```
+
+```{r}
+set.seed(100)
+
+x=rt(50,3)
+lillie.test(x)
+```
+
+### Anderson-Darling (A-D)
+
+```{r}
+#library(nortest)
+ad.test(x)
+```
+
+### Shapiro-Wilks (S-W)
+
+```{r}
+shapiro.test(muestra)
+shapiro.test(x)
+```
+
+### Omnibus de D’Agostino-Pearson
+
+```{r}
+library(fBasics)
+
+dagoTest(x)
+```
