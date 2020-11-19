@@ -10,6 +10,53 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r}
+n = 200
+total.col = c(40,44,76,40)
+obs = c(5,8,15,22,20,26,46,8,15,10,15,10)
+esp = c()
 
+for (x in c(50,100,50)){
+  esp = c(esp,total.col*(x/n))
+}
+
+x0 = sum(((obs-esp)^2)/esp)
+x0
+
+p.valor=pchisq(x0,df=6,lower.tail = FALSE)
+p.valor
 ```
 
+```{r}
+chisq.test(matrix(c(11,538,70,464),2,2), correct = FALSE)
+
+# También sirve para el test de homogeneidad
+chisq.test(matrix(c(5,20,15,8,26,10,15,46,15,22,8,10),3,4))
+```
+
+```{r}
+(Tabla.con.marginales = addmargins(WorldPhones))
+(tabla.frec.esperadas = rowSums(WorldPhones)%*%t(colSums(WorldPhones)))/sum(WorldPhones)
+
+chisq.test(WorldPhones)
+```
+
+### Caso en que las frecuencias esperadas son inferiores a 5
+
+```{r}
+(tabla.contingencia =table(cut(iris$Petal.Length,4),iris$Species))
+(tabla.frec.esperadas = rowSums(tabla.contingencia)%*%t(colSums(tabla.contingencia))/sum(tabla.contingencia))
+
+chisq.test(tabla.contingencia)
+
+set.seed(NULL)
+chisq.test(tabla.contingencia,simulate.p.value = TRUE, B=5000)
+```
+
+### Ejercicios cuestionario
+
+```{r}
+(tabla.contingencia = table(mtcars$am,mtcars$vs))
+(tabla.frec.esperadas = rowSums(tabla.contingencia)%*%t(colSums(tabla.contingencia))/sum(tabla.contingencia))
+
+chisq.test(tabla.contingencia,simulate.p.value = TRUE, B=5000)
+```

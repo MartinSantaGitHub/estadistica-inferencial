@@ -1,0 +1,155 @@
+---
+title: "Tarea 10"
+author: "Martin Santamaria"
+date: "19/11/2020"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+Sys.setenv(RETICULATE_PYTHON = "/Python38")
+library(reticulate)
+```
+
+### Ejercicio 1
+
+Realizaré este ejercicio en `Python` para practicar un poco el lenguaje. Recordemos la fórmula del estadístico de contraste
+
+$$\chi_0 = \sum_{i=1}^I\sum_{j=1}^J\frac{(o_{ij} - e_{ij})^2}{e_{ij}}$$
+
+```{python}
+import numpy as np
+import pandas as pd
+import scipy.stats as stats
+
+data = pd.DataFrame({"color":["Claro"]*1300+["Medio"]*500+["Oscuro"]*200+
+                             ["Claro"]*200+["Medio"]*500+["Oscuro"]*300,
+                     "dulzor":["Muy Dulce"]*1300+["Muy Dulce"]*500+["Muy Dulce"]*200+
+                              ["No Dulce"]*200+["No Dulce"]*500+["No Dulce"]*300})
+                     
+tabla = pd.crosstab(data.color,data.dulzor,margins=True)
+tabla
+
+obs = tabla.iloc[0:3,0:2]
+obs
+
+esp = pd.DataFrame(np.outer(tabla["All"][0:3],tabla.loc["All"][0:2])/tabla["All"]["All"])
+esp.columns = ["Muy Dulce","No Dulce"]
+esp.index = ["Claro","Medio","Oscuro"]
+esp
+```
+
+Podemos observar que todas las frecuencias esperadas son mayores a 5
+
+```{python}
+chi0 = ((obs-esp)**2/esp).sum().sum()
+chi0
+
+p_valor = 1 - stats.chi2.cdf(chi0, df = (3-1)*(2-1))
+p_valor
+```
+
+El p-valor nos dió directamente cero, con lo cual rechazamos la independencia de la dulzura y el color de las naranjas. Verificamos nuestros cálculos a mano con la función `chi2_contingency`
+
+```{python}
+stats.chi2_contingency(obs)
+```
+
+Observamos que hemos obtenido los mismos resultados.
+
+### Ejercicio 2
+
+Armamos la tabla de contingencia dividida en los grupos **Suspenso**, **Aprobado** y **Notable**
+
+```{r}
+library(fancycut)
+
+tabla = matrix(c(4.6,5.,5.1,5.6,4.6,5.,5.7,5.4,4.4,8.,4.6,3.4,5.3,4.,3.5,4.,5.,4.7,3.6,4.1,7.2,7.3,5.7,4.1,5.7,6.1,6.,7.8,7.,3.8),byrow = TRUE,nrow = 3)
+
+tabla.contingencia = table(row(tabla),fancycut(tabla,Suspenso='(-Inf,5)',Aprobado='[5,6]',Notable='(6,Inf)'))
+rownames(tabla.contingencia) = c("A","B","C")
+
+tabla.contingencia
+```
+
+```{r}
+chisq.test(tabla.contingencia)
+```
+
+El test nos indica que la aproximación puede ser incorrecta debido a la presencia de valores menores que 5 en la tabla de frecuencias esperadas
+
+```{r}
+(tabla.frec.esperadas = rowSums(tabla.contingencia)%*%t(colSums(tabla.contingencia))/sum(tabla.contingencia))
+```
+
+Confirmamos nuestras sospechas observando la segunda y tercera columna de la tabla de frecuencias esperadas. Realizamos nuevamente el test pero esta vez simulando el p-valor
+
+```{r}
+chisq.test(tabla.contingencia, simulate.p.value = TRUE)
+```
+
+El p-valor obtenido nos da evidencias para rechazar la hipótesis nula y considerar que existe dependencia entre el grupo de alumnos y las notas obtenidas.
+
+### Ejercicio 3
+
+Utilizamos nuevamente `Python` para este ejercicio
+
+```{python}
+data = pd.DataFrame({"C2":["B1"]*10+["B2"]*5+["B1"]*5+["B2"]*10,
+                     "C1":["A1"]*10+["A1"]*5+["A2"]*5+["A2"]*10})
+                     
+tabla = pd.crosstab(data.C2,data.C1,margins=True)
+tabla
+
+obs = tabla.iloc[0:2,0:2]
+obs
+
+esp = pd.DataFrame(np.outer(tabla["All"][0:2],tabla.loc["All"][0:2])/tabla["All"]["All"])
+esp.columns = ["A1","A2"]
+esp.index = ["B1","B2"]
+esp
+```
+
+Los valores de la tabla de frecuencias esperadas son todos mayores a 5
+
+```{python}
+result = stats.chi2_contingency(obs)
+result
+```
+
+```{r}
+p_valor = py$result[[2]]
+```
+
+el p-valor obtenido de $`r round(p_valor,2)`$ nos brinda indicios suficientes para considerar la independencia entre los criterios C1 y C2.
+
+### Ejercicio 4
+
+Aqui estamos frente a un test de homogeneidad por la manera en la que se toma la muestra para el contraste de hipótesis que se quiere estudiar
+
+```{r}
+tabla.contingencia = matrix(c(72,230,54,192,16,63,8,15),byrow = TRUE,nrow = 4)
+rownames(tabla.contingencia) = c("0","A","B","AB")
+colnames(tabla.contingencia) = c("Portadores","No Portadores")
+tabla.contingencia
+
+chisq.test(tabla.contingencia)
+```
+
+El p-valor obtenido nos indica que no existen diferencias entre las frecuencias de los diferentes tipos sanguíneos y los portadores y los no portadores.
+
+### Ejercicio 5
+
+```{r}
+tabla.contingencia = matrix(c(28,35,19,38,41,44,53,60),byrow = TRUE,nrow = 4)
+rownames(tabla.contingencia) = c("Negativo","Desorden bipolar","Desorden unipolar","Desórdenes unipolar y bipolar")
+colnames(tabla.contingencia) = c("Precoces","Tardíos")
+tabla.contingencia
+
+chisq.test(tabla.contingencia)
+```
+
+El p-valor nos sugiere que **no** existe dependencia entre el historial familiar y la edad en la que se manifiesta el desorden bipolar.
