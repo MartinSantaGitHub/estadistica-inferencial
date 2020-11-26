@@ -1,0 +1,121 @@
+---
+title: "Tarea 13"
+author: "Martin Santamaria"
+date: "25/11/2020"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## La eficacia de los fertilizantes en los cultivos de patatas
+
+Es un ANOVA por bloques ya que tenemos dependencia entre los fertilizantes y la finca donde se utiliza. Los bloques son las fincas y los tratamientos los fertilizantes ya que queremos estudiar la igualdad de eficacia media de los fertilizantes. Nuestras hipótesis a contrastar son
+
+$$
+\left\{
+\begin{array}{ll}
+H_0 :  \mu_{F1}=\mu_{F2}=\mu_{F3}=\mu_{F4}, \\
+H_1 : \exists i,j=1,\ldots ,4\mid  \mu_{Fi} \neq \mu_{Fj}.
+\end{array}
+\right.
+$$
+
+Sobre el modelo hagamos las siguientes suposiciones:
+
+- Por un lado, tenemos $k\cdot b$ observaciones cada una de tamaño 1.
+
+- Luego suponemos estas $k\cdot b$ poblaciones que son todas normales y homocedasticas, es decir, todas con la misma varianza $\sigma^2$. La realidad es que deberiamos tomar una muestra mayor por cada subpoblación $k\cdot b$ para realizar los tests correspondientes de normalidad e igualdad de varianzas, pero al tener solo una muestra de cada una, aceptamos que son normales y con la misma varianza.
+
+- Por último, necesitamos ver si el efecto de los bloques y los tratamientos es **aditivo**, o sea, si no hay **interacción** entre los bloques y los tratamientos. Mismo caso anterior, al tener solo una muestra de cada tratamiento por bloque y no disponer de la media para cada bloque y tratamiento, vamos a dar por supuesto que el efecto de los bloques y los tratamientos es **aditivo**. Procedamos entonces a armar la tabla con los datos
+
+```{r}
+rendimiento = c(2.1,2.2,1.8,2.1,2.2,2.6,1.9,2.0,1.8,2.7,1.6,2.2,2.,2.5,2.,2.4,1.9,2.8,1.9,2.1)
+fertilizante = rep(1:4,times=5)
+bloque = rep(1:5,each=4)
+tabla.datos.ANOVA.BLOQUES = data.frame(rendimiento,fertilizante,bloque)
+
+head(tabla.datos.ANOVA.BLOQUES)
+```
+
+Calculamos los estadísticos
+
+```{r}
+num.bloques = 5
+num.fertilizantes = 4
+
+suma.total = sum(tabla.datos.ANOVA.BLOQUES$rendimiento)
+suma.total.cuadrados = sum(tabla.datos.ANOVA.BLOQUES$rendimiento^2)
+sumas.fertilizantes = aggregate(rendimiento ~ fertilizante,data = tabla.datos.ANOVA.BLOQUES, FUN="sum")
+sumas.bloques = aggregate(rendimiento ~ bloque,data = tabla.datos.ANOVA.BLOQUES, FUN="sum")
+
+SST = suma.total.cuadrados-suma.total^2/nrow(tabla.datos.ANOVA.BLOQUES)
+SS.Tr = (1/num.bloques)*sum(sumas.fertilizantes[,2]^2)-suma.total^2/nrow(tabla.datos.ANOVA.BLOQUES)
+SS.Bl = (1/num.fertilizantes)*sum(sumas.bloques[,2]^2)-suma.total^2/nrow(tabla.datos.ANOVA.BLOQUES)
+SSE = SST-SS.Tr-SS.Bl
+
+MS.Tr = SS.Tr/(num.fertilizantes-1)
+MS.Bl = SS.Bl/(num.bloques-1)
+MSE = SSE/((num.bloques-1)*(num.fertilizantes-1))
+
+est.contraste = MS.Tr/MSE
+p.valor = pf(est.contraste,num.fertilizantes-1,(num.fertilizantes-1)*(num.bloques-1),lower.tail = FALSE)
+```
+
+$\displaystyle SS_{Total}=`r round(SST,3)`$
+
+$\displaystyle SS_{Tr}=`r round(SS.Tr,3)`$
+
+$\displaystyle SS_{Bl}=`r round(SS.Bl,3)`$
+
+$\displaystyle SS_E=`r round(SSE,3)`$
+
+La tabla del ANOVA es
+
+<div class="center">
+|Origen variación|Grados de libertad|Sumas de cuadrados | Cuadrados medios|Estadístico de contraste|p-valor|
+|:---|---:|:---:|:---:|:---:|:---:|
+|Tratamiento|$`r num.fertilizantes-1`$|$`r round(SS.Tr,3)`$|$`r round(MS.Tr,3)`$|$`r round(est.contraste,3)`$|`r round(p.valor,3)`|
+|Bloque|$`r num.bloques-1`$|$`r round(SS.Bl,3)`$|$`r round(MS.Bl,3)`$|||
+|Error|$`r (num.fertilizantes-1)*(num.bloques-1)`$|$`r round(SSE,3)`$|$`r round(MSE,3)`$| | |
+</div>
+
+El p-valor obtenido nos da indicios para rechazar la hipótesis nula y considerar que la media de los tratamientos son diferentes. Hagamos un `summary` de la función `aov` para ver que resultado nos devuelve
+
+```{r}
+resultado.anova = aov(rendimiento~(fertilizante=as.factor(fertilizante))+(bloque=as.factor(bloque)),data=tabla.datos.ANOVA.BLOQUES,)
+
+summary(resultado.anova)
+```
+
+Con un nivel de significación importante, observamos los mismos resultados que los cálculos hechos a mano y por tanto llegamos a las mismas conclusiones. Veamos un gráfico de un boxplot para darnos un pantallazo de cuales son los tratamientos que difieren
+
+```{r}
+boxplot(rendimiento ~ as.factor(fertilizante),
+        data = tabla.datos.ANOVA.BLOQUES,
+        xlab = "Fertilizante",
+        ylab = "Rendimiento")
+```
+
+En el gráfico se observa cierta similitud de medias entre los fertilizantes 1, 3 y 4. Realizamos un **test de Duncan** para detectar las diferencias entre los fertilizantes
+
+```{r}
+library(agricolae)
+
+#duncan.test(resultado.anova,"F",group=FALSE)$comparison
+duncan.test(resultado.anova,"fertilizante",group=TRUE)$group
+duncan.test(resultado.anova,"fertilizante",group=FALSE)$comparison
+```
+
+De ambos resultados tanto por grupo como por comparación, podemos ver igualdad de medias entre los fertilizantes 1 y 4 y el 1 y 3, no así en el caso del 4 y el 3. Por último veamos que valor nos da la eficiencia relativa, RE 
+
+```{r}
+c = num.bloques*(num.fertilizantes-1)/(num.bloques*num.fertilizantes-1)
+RE = c+(1-c)*MS.Bl/MSE
+```
+
+El valor de $RE = `r round(RE,3)` < 1.25$ nos dice que la construcción de bloques no ha sido efectiva y que un experimento completamente aleatorio (CA) se hubiese preferido antes que el experimento de bloques completo aleatorio (BCA). Sin embargo, la diferencia de observaciones no es tanta, de hecho, si nos fijamos en el total de observaciones que hubiesemos necesitado en un diseño CA, nos da $`r ceiling(RE*nrow(tabla.datos.ANOVA.BLOQUES))`$, o sea, una observación menos que el total de $`r nrow(tabla.datos.ANOVA.BLOQUES)`$ del experimento de bloques completo aleatorio (BCA).

@@ -1,0 +1,449 @@
+---
+title: "ANOVA"
+author: "Martin Santamaria"
+date: "22/11/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+Sys.setenv(RETICULATE_PYTHON = "/Python38")
+library(reticulate)
+```
+
+### Muestras
+
+```{r}
+Incremento.celular=c(
+  62.6,50.9,45.5,29.5,24.9,59.6,44.3,41.1,22.8,17.2,
+  64.5,47.5,29.8,19.2,7.8,59.3, 49.5,38.3,20.6,10.5,
+  58.6,48.5,40.2,29.2,17.8,64.6,50.4,38.5,24.1,22.1,
+  50.9,35.2,30.2,22.6,22.6,56.2,49.9,27.0,32.7,16.8,
+  52.3,42.6,40.0, 24.4,15.9,62.8,41.6,33.9,29.6,8.8)
+
+nivel.Presion=rep(c("0.0","0.083","0.29","0.50","0.86"),times=10)
+
+tabla.datos.ANOVA = data.frame(Incremento.celular,nivel.Presion)
+head(tabla.datos.ANOVA)
+```
+
+### Gráficos
+
+```{r}
+presion = as.numeric(as.character(tabla.datos.ANOVA$nivel.Presion))
+plot(presion,tabla.datos.ANOVA$Incremento.celular,type="p",
+     pch=18,cex=2,xlab="Nivel de CO2",ylab="% de masa celular")
+
+plot(1:50,tabla.datos.ANOVA$Incremento.celular,type="p",pch=17,
+     xlab="Número de microorganismo (por nivel)",ylab="% de incremento de masa celular",cex=0)
+points(1:10,tabla.datos.ANOVA$Incremento.celular[seq(from=1,to=46,by=5)],pch=18,cex=1.5)
+points(11:20,tabla.datos.ANOVA$Incremento.celular[seq(from=2,to=47,by=5)],pch=15,cex=1.5)
+points(21:30,tabla.datos.ANOVA$Incremento.celular[seq(from=3,to=48,by=5)],pch=17,cex=1.5)
+points(31:40,tabla.datos.ANOVA$Incremento.celular[seq(from=4,to=49,by=5)],pch=19,cex=1.5)
+points(41:50,tabla.datos.ANOVA$Incremento.celular[seq(from=5,to=50,by=5)],pch=8,cex=1.5)
+
+lines(c(0,50),c(mean(tabla.datos.ANOVA$Incremento.celular),
+                mean(mean(c(tabla.datos.ANOVA$Incremento.celular)))),lwd=3,col="red")
+text(5,mean(mean(tabla.datos.ANOVA$Incremento.celular)-2),"Media global",col="red")
+
+for (i in 1:5){lines(c(0+10*(i-1),10*i),
+          c(mean(tabla.datos.ANOVA$Incremento.celular[seq(from=i,to=46+i,by=5)]),
+          mean(tabla.datos.ANOVA$Incremento.celular[seq(from=i,to=46+i,by=5)])),lwd=3)}
+
+text(20,mean(tabla.datos.ANOVA$Incremento.celular[seq(from=1,to=46,by=5)]),
+     "Media del Nivel 0.0")
+text(30,mean(tabla.datos.ANOVA$Incremento.celular[seq(from=2,to=47,by=5)]),
+     "Media del Nivel 0.083")
+text(40,mean(tabla.datos.ANOVA$Incremento.celular[seq(from=3,to=48,by=5)]-1),
+     "Media del Nivel 0.29")
+text(20,mean(tabla.datos.ANOVA$Incremento.celular[seq(from=4,to=49,by=5)]),
+     "Media del Nivel 0.50")
+text(30,mean(tabla.datos.ANOVA$Incremento.celular[seq(from=5,to=50,by=5)]),
+     "Media del Nivel 0.86")
+```
+
+### Estadísticos
+
+```{r}
+sumas.niveles = aggregate(Incremento.celular ~ nivel.Presion,
+                          data = tabla.datos.ANOVA, FUN="sum")
+sumas.niveles
+
+medias.niveles = aggregate(Incremento.celular ~  nivel.Presion,
+                           data=tabla.datos.ANOVA, FUN="mean")
+medias.niveles
+
+suma.total = sum(tabla.datos.ANOVA$Incremento.celular)
+suma.total
+
+media.muestral = mean(tabla.datos.ANOVA$Incremento.celular)
+media.muestral
+```
+
+```{r}
+(ni=table(tabla.datos.ANOVA$nivel.Presion))
+(N=sum(ni))
+```
+
+$$SS_{Total}=\sum\limits_{i=1}^k\sum\limits_{j=1}^{n_i} (X_{ij}-\overline{X}_{\bullet\bullet})^2=\sum\limits_{i=1}^k\sum\limits_{j=1}^{n_i} X_{ij}^2 - \dfrac{T_{\bullet\bullet}^2}{N}$$
+
+```{r}
+(SSTotal1 =sum((tabla.datos.ANOVA$Incremento.celular-media.muestral)^2))
+
+(SSTotal = sum(tabla.datos.ANOVA$Incremento.celular^2)-(suma.total^2)/N)
+```
+
+$$SS_{Tr}=\sum\limits_{i=1}^k n_i
+(\overline{X}_{i\bullet}-\overline{X}_{\bullet\bullet})^2=\sum\limits_{i=1}^k \dfrac{T_{i\bullet}^2}{n_i} -\dfrac{T_{\bullet\bullet}^2}{N}$$
+
+```{r}
+(SSTr1=sum(ni*(medias.niveles[,2]-media.muestral)^2))
+
+(SSTr=sum(sumas.niveles[,2]^2/ni)-(suma.total^2)/N)
+```
+
+$$SS_E=\sum\limits_{i=1}^k\sum\limits_{j=1}^{n_i} (X_{ij}-\overline{X}_{i\bullet})^2=SS_{Total}-SS_{Tr}$$
+
+```{r}
+(SSE1=sum((tabla.datos.ANOVA$Incremento.celular-medias.niveles[,2])^2))
+
+(SSE=SSTotal-SSTr)
+```
+
+### Estadísticos del contraste
+
+```{r}
+k=5
+
+(MStr = SSTr/(k-1))
+
+(MSE = SSE/(N-k))
+
+(F = MStr/MSE)
+
+(p.valor = pf(F,k-1,N-k,lower.tail = FALSE))
+```
+
+### Boxplot
+
+```{r}
+boxplot(Incremento.celular ~ nivel.Presion, data = tabla.datos.ANOVA,
+        xlab="Presión",ylab="Incremento celular")
+```
+
+```{r}
+X = tabla.datos.ANOVA$Incremento.celular
+F = tabla.datos.ANOVA$nivel.Presion
+
+summary(aov(X~F))
+```
+
+## Test T de Bonferroni
+
+```{r}
+(pares = rbind(c(1,2),c(1,3),c(1,4),c(1,5),c(2,3),c(2,4),c(2,5),c(3,4),c(3,5),c(4,5)))
+
+(est.contraste.pares = (medias.niveles[pares[,1],2]-medias.niveles[pares[,2],2])/
+    (sqrt(MSE*(1/ni[pares[,1]]+1/ni[pares[,2]]))))
+
+(pares = cbind(pares,est.contraste.pares))
+```
+
+```{r}
+calculo.p.valor = function(x){2*(pt(abs(x),N-k,lower.tail = FALSE))}
+
+(p.valores = sapply(est.contraste.pares,calculo.p.valor))
+
+(pares = cbind(pares,p.valores))
+
+pares[which(p.valores < 0.05/choose(k,2)),]
+```
+
+```{r}
+pairwise.t.test(X,F,p.adjust.method = "none")
+
+pairwise.t.test(X,F,p.adjust.method = "bonferroni")
+```
+
+## Test T de Holm (más potente)
+
+```{r}
+(pares.ord = pares[order(pares[,4]),])
+
+p.valores.ajust=pares.ord[,4]*(choose(k,2)+1-1:choose(k,2))
+pares.ord = cbind(pares.ord,p.valores.ajust)
+round(pares.ord,12)
+
+round(pares.ord[which(pares.ord[,5] <= 0.05),],6)
+```
+
+```{r}
+pairwise.t.test(X,F,p.adjust.method = "holm")
+```
+
+## Contraste de Duncan
+
+```{r}
+medias.niveles
+```
+
+```{r}
+library(agricolae)
+
+resultado.anova = aov(X~F)
+
+duncan.test(resultado.anova,"F",group=FALSE)$comparison
+duncan.test(resultado.anova,"F",group=TRUE)$group
+```
+
+## Contraste de Tukey (para datos balanceados)
+
+```{r}
+TukeyHSD(resultado.anova)
+```
+
+## Test de Normalidad para cada uno de los factores (nivel de presión)
+
+```{r}
+library(nortest)
+
+lillie.test(X[F=="0.0"])
+lillie.test(X[F=="0.083"])
+lillie.test(X[F=="0.29"])
+lillie.test(X[F=="0.50"])
+lillie.test(X[F=="0.86"])
+```
+
+## Test de varianza u homocedasticidad (Bartlett)
+
+```{r}
+bartlett.test(X ~ F)
+```
+
+## Bloques completos aleatorios
+
+```{r}
+kilocal = c(1.4,1.1,0.7,1.5,1.2,0.8,1.8,1.3,
+            0.7,1.7,1.3,0.8,1.6,0.7,0.1,1.5,
+            1.2,0.7,1.7,1.1,0.4,2.0,1.3,0.6)
+tratamiento = rep(1:3,8)
+bloque = rep(1:8,each=3)
+tabla.datos.ANOVA.BLOQUES = data.frame(kilocal,tratamiento,bloque)
+
+head(tabla.datos.ANOVA.BLOQUES)
+```
+
+### Estadísticos
+
+$T_{i\bullet} = \sum\limits_{j=1}^b X_{ij}$, suma total del tratamiento $i$-ésimo, $i=1,2,\ldots,k$
+
+```{r}
+(sumas.tratamientos = aggregate(kilocal ~ tratamiento,
+                                data = tabla.datos.ANOVA.BLOQUES, FUN="sum"))
+```
+
+$\overline{X}_{i\bullet} =\dfrac{T_{i\bullet}}{b}$, media muestral del tratamiento $i$-ésimo, $i=1,2,\ldots,k$
+
+```{r}
+(medias.tratamientos = aggregate(kilocal ~ tratamiento, 
+                                 data = tabla.datos.ANOVA.BLOQUES, FUN="mean"))
+```
+
+$T_{\bullet j}=\sum\limits_{i=1}^k X_{ij}$, suma total del bloque $j$-ésimo,  $j=1,2,\ldots,b$
+
+```{r}
+(sumas.bloques = aggregate(kilocal ~ bloque, 
+                                 data = tabla.datos.ANOVA.BLOQUES, FUN="sum"))
+```
+
+$\overline{X}_{\bullet j} =\dfrac{T_{\bullet j}}{k}$, media muestral del bloque $j$-ésimo,  $j=1,2,\ldots,b$
+
+```{r}
+(medias.bloques = aggregate(kilocal ~ bloque, 
+                            data = tabla.datos.ANOVA.BLOQUES, FUN="mean"))
+```
+
+```{r}
+(suma.total = sum(tabla.datos.ANOVA.BLOQUES$kilocal))
+(media.muestral = suma.total/nrow(tabla.datos.ANOVA.BLOQUES))
+(suma.total.cuadrados = sum(tabla.datos.ANOVA.BLOQUES$kilocal^2))
+```
+
+### Estadísticos de contraste
+
+$\displaystyle SS_{Total}=T_{\bullet\bullet}^{(2)}-\dfrac{T_{\bullet\bullet}^2}{k\cdot b}$
+
+```{r}
+(SST = suma.total.cuadrados-suma.total^2/nrow(tabla.datos.ANOVA.BLOQUES))
+```
+
+$\displaystyle SS_{Tr}= \sum\limits_{i=1}^k\dfrac{T_{i\bullet}^2}{b}-\dfrac{T_{\bullet\bullet}^2}{k\cdot b}$
+
+```{r}
+num.bloques = 8
+(SS.Tr = (1/num.bloques)*sum(sumas.tratamientos[,2]^2)-
+    suma.total^2/nrow(tabla.datos.ANOVA.BLOQUES))
+```
+
+$\displaystyle SS_{Bl}= \sum\limits_{j=1}^b \dfrac{T_{\bullet j}^2}{k}-\dfrac{T_{\bullet\bullet}^2}{k\cdot b}$
+
+```{r}
+num.tratamientos = 3
+(SS.Bl = (1/num.tratamientos)*sum(sumas.bloques[,2]^2)-
+   suma.total^2/nrow(tabla.datos.ANOVA.BLOQUES))
+```
+
+$SS_E=SS_{Total}-SS_{Tr}-SS_{Bl}$
+
+```{r}
+(SSE = SST-SS.Tr-SS.Bl)
+```
+
+$MS_{Tr}=\dfrac{SS_{Tr}}{k-1}$
+
+```{r}
+(MS.Tr = SS.Tr/(num.tratamientos-1))
+```
+
+$MS_E = \dfrac{SS_E}{(b-1) (k-1)}$
+
+```{r}
+(MSE=SSE/((num.bloques-1)*(num.tratamientos-1)))
+```
+
+$MS_{Bl}=\dfrac{SS_{Bl}}{b-1}$
+
+```{r}
+(MS.Bl = SS.Bl/(num.bloques-1))
+```
+
+$F=\frac{MS_{Tr}}{MS_E}$
+
+```{r}
+(est.contraste = MS.Tr/MSE)
+```
+
+$p=P(F_{k-1,(k-1)(b-1)}\geq F)$
+
+```{r}
+(p=pf(est.contraste,num.tratamientos-1,(num.tratamientos-1)*(num.bloques-1),
+      lower.tail = FALSE))
+```
+
+### En R
+
+Tener en cuenta que las columnas de los tratamientos y los bloques deben ser factores
+
+```{r}
+summary(aov(kilocal ~  as.factor(tratamiento) + as.factor(bloque),
+            data = tabla.datos.ANOVA.BLOQUES))
+```
+
+### RE
+
+$\widehat{RE}=c+(1-c)\frac{MS_{Bl}}{MS_E}$, dónde $c=\dfrac{b(k-1)}{(bk-1)}$
+
+```{r}
+c=num.bloques*(num.tratamientos-1)/(num.bloques*num.tratamientos-1)
+(RE=c+(1-c)*MS.Bl/MSE)
+```
+
+## ANOVA de dos vías
+
+```{r}
+GSI = c(0.90,0.83,1.06,0.67,0.98,0.57,1.29,0.47,1.12,0.66,
+        1.30,1.01,2.88,1.52,2.42,1.02,2.66,1.32,2.94,1.63)
+temperatura = factor(rep(c(27,16),each=10))
+fotoperiodos = factor(rep(c(9,14),times=10))
+tabla.datos.GSI = data.frame(GSI,temperatura,fotoperiodos)
+head(tabla.datos.GSI)
+```
+
+### Estadísticos
+
+```{r}
+(suma.combinacion.niveles = aggregate(GSI ~ temperatura+fotoperiodos,
+                                      data = tabla.datos.GSI, FUN="sum"))
+
+(media.combinacion.niveles = aggregate(GSI ~ temperatura+fotoperiodos,
+                                       data=tabla.datos.GSI, FUN="mean"))
+
+(suma.fotoperiodos = aggregate(GSI ~ fotoperiodos, data=tabla.datos.GSI, FUN="sum"))
+
+(media.fotoperiodos = aggregate(GSI ~ fotoperiodos, data = tabla.datos.GSI, FUN="mean"))
+
+(suma.temperatura = aggregate(GSI ~ temperatura, data = tabla.datos.GSI, FUN="sum"))
+
+(media.temperatura = aggregate(GSI ~ temperatura, data = tabla.datos.GSI, FUN="mean"))
+
+(suma.total = sum(tabla.datos.GSI$GSI))
+
+(media.muestral = mean(tabla.datos.GSI$GSI))
+
+(suma.cuadrados = sum(tabla.datos.GSI$GSI^2))
+```
+
+### Estadísticos de contraste
+
+```{r}
+a=2; b=2; n=5;
+SST = suma.cuadrados - suma.total^2/(a*b*n)
+
+(SSA = (1/(b*n))*sum(suma.fotoperiodos[,2]^2)-suma.total^2/(a*b*n))
+
+(SSB = (1/(a*n))*sum(suma.temperatura[,2]^2)-suma.total^2/(a*b*n))
+
+(SSTr = (1/n)*sum(suma.combinacion.niveles[,3]^2)-suma.total^2/(a*b*n))
+
+(SSAB = SSTr-SSA-SSB)
+
+(SSE = SST-SSTr)
+```
+
+### Contraste
+
+```{r}
+(MSA = SSA/(a-1))
+
+(MSB = SSB/(b-1))
+
+(MSAB = SSAB/((a-1)*(b-1)))
+
+(MSTr = (SSTr/(a*b-1)))
+
+(MSE = (SSE/(a*b*(n-1))))
+```
+
+### En R
+
+Tener en cuenta que las columnas de los tratamientos y los bloques deben ser factores
+
+```{r}
+boxplot(GSI ~ fotoperiodos, data = tabla.datos.GSI, xlab="Fotoperíodo",ylab="GSI")
+boxplot(GSI ~ temperatura, data = tabla.datos.GSI, xlab="Temperatura",ylab="GSI")
+boxplot(GSI ~ fotoperiodos+temperatura, data = tabla.datos.GSI,
+        xlab="Combinación Fotoperíodo.Temperatura",ylab="GSI")
+
+summary(aov(GSI ~ fotoperiodos*temperatura, data = tabla.datos.GSI))
+
+# Para los tratamientos
+summary(aov(GSI ~ fotoperiodos:temperatura, data = tabla.datos.GSI))
+```
+
+### Gráficos de interacción
+
+```{r}
+GSI = tabla.datos.GSI$GSI
+fotoperiodos = tabla.datos.GSI$fotoperiodos
+temperatura = tabla.datos.GSI$temperatura
+
+interaction.plot(fotoperiodos,temperatura,GSI, xlab="fotoperíodo",ylab="GSI")  
+interaction.plot(temperatura,fotoperiodos,GSI,xlab="temperatura",ylab="GSI")
+```
+
+## ANOVA en `Python`
+
+```{python}
+
+```
+

@@ -1,0 +1,177 @@
+---
+title: "Tarea 14"
+author: "Martin Santamaria"
+date: "26/11/2020"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Cantidad de oxígeno de dos especies de moluscos en diferentes concentraciones de agua de mar
+
+Procedemos a armar la tabla con los datos
+
+```{r}
+microlitros.oxigeno = c(7.16,5.20,11.11,6.78,5.20,9.74,13.60,7.18,18.8,
+                        8.93,6.37,9.74,8.26,13.20,10.50,14.00,8.39,14.60,
+                        16.10,10.40,11.10,9.66,7.18,11.80,6.14,4.47,9.63,
+                        3.86,9.90,6.38,10.40,5.75,13.40,5.49,11.8,14.50,
+                        6.14,4.95,14.50,10.00,6.49,10.20,11.60,5.44,17.70,
+                        5.80,9.90,12.30)
+especie = factor(rep(c("A. Scabra","A. Digitalis"),each=24))
+conc.agua.mar = factor(rep(c("100%","75%","50%"),times=16))
+
+# COE: Cantidad Oxígeno Especie
+tabla.datos.COE = data.frame(microlitros.oxigeno,especie,conc.agua.mar)
+
+# Hago un doble head para ver si los datos de ambas especies se cargaron bien
+head(tabla.datos.COE)
+head(tabla.datos.COE[25:nrow(tabla.datos.COE),])
+```
+
+Este es un ANOVA de dos vías y balanceado ya que tenemos muestras aleatorias independientes del mismo tamaño $(n = 8)$ de cada combinación de niveles de los dos factores. Verifiquemos el modelo
+
+#### - Cada una de las $a\cdot b$ poblaciones es normal
+
+Utilizaremos el test de Shapiro-Wilk para testear la normalidad de cada una de las muestras
+
+```{r}
+test.norm = aggregate(microlitros.oxigeno ~ especie+conc.agua.mar, data = tabla.datos.COE, FUN="shapiro.test")
+test.norm$microlitros.oxigeno[which(test.norm$microlitros.oxigeno[,"p.value"] < 0.05),]
+```
+
+Vemos que una de ellas no cumple o no pasa el test de normalidad. Aun así consideraremos todas ellas normales
+
+#### - Todas las $a\cdot b$ poblaciones tienen la misma varianza, $\sigma^2$
+
+Utilizaremos el test de Fisher de la varianza para testear por pares cada una de las poblaciones $a\cdot b$
+
+```{r}
+var.tests = c()
+
+for (conc in unique(tabla.datos.COE$conc.agua.mar)) {
+    X=tabla.datos.COE[tabla.datos.COE$especie == "A. Scabra" & tabla.datos.COE$conc.agua.mar == conc,]
+    var.tests = c(var.tests, var.test(X$microlitros.oxigeno,
+                                      tabla.datos.COE[
+                                      tabla.datos.COE$especie == "A. Digitalis" & 
+                                      tabla.datos.COE$conc.agua.mar == "100%",]$microlitros.oxigeno)$p.value,
+                             var.test(X$microlitros.oxigeno,
+                                      tabla.datos.COE[
+                                      tabla.datos.COE$especie == "A. Digitalis" & 
+                                      tabla.datos.COE$conc.agua.mar == "75%",]$microlitros.oxigeno)$p.value,
+                             var.test(X$microlitros.oxigeno,
+                                      tabla.datos.COE[
+                                      tabla.datos.COE$especie == "A. Digitalis" & 
+                                      tabla.datos.COE$conc.agua.mar == "50%",]$microlitros.oxigeno)$p.value
+                 )
+}
+
+var.tests = c(var.tests, var.test(tabla.datos.COE[
+                                      tabla.datos.COE$especie == "A. Scabra" & 
+                                      tabla.datos.COE$conc.agua.mar == "100%",]$microlitros.oxigeno,
+                                      tabla.datos.COE[
+                                      tabla.datos.COE$especie == "A. Scabra" & 
+                                      tabla.datos.COE$conc.agua.mar == "75%",]$microlitros.oxigeno)$p.value,
+                  var.test(tabla.datos.COE[
+                                      tabla.datos.COE$especie == "A. Scabra" & 
+                                      tabla.datos.COE$conc.agua.mar == "100%",]$microlitros.oxigeno,
+                                      tabla.datos.COE[
+                                      tabla.datos.COE$especie == "A. Scabra" & 
+                                      tabla.datos.COE$conc.agua.mar == "50%",]$microlitros.oxigeno)$p.value)
+
+length(var.tests[which(var.tests < 0.05)])
+```
+
+Como vemos, en este caso, se cumple a rajatabla la homocedasticidad para todas las poblaciones $a\cdot b$. En conclusión, salvo aquella única muestra que no cumplía el test de la normalidad, podemos afirmar que los datos cumplen las suposiciones del modelo para poder realizar un ANOVA de dos factores. Realicemos unos gráficos iniciales para observar si hay diferencias entre los factores
+
+```{r}
+boxplot(microlitros.oxigeno ~ especie, data = tabla.datos.COE, xlab="Especie",ylab="Microlitros Oxígeno")
+boxplot(microlitros.oxigeno ~ conc.agua.mar, data = tabla.datos.COE, xlab="Concentración Agua de Mar",ylab="Microlitros Oxígeno")
+boxplot(microlitros.oxigeno ~ especie+conc.agua.mar, data = tabla.datos.COE,
+        xlab="Combinación Especie - Concentración Agua de Mar",ylab="Microlitros Oxígeno",
+        cex.axis=0.70)
+```
+
+A simple vista podria decirse que no hay diferencias entre las especies, si las hay entre la combinación de los dos factores y en cuanto a la concentración del agua de mar, la concentración al 50% sería diferente de las otras dos. A continuación se viene lo gordo. El cálculo de todos los estadísticos para poder realizar el ANOVA de dos vías
+
+#### Estadísticos
+
+```{r}
+a = 2 
+b = 3 
+n = 8
+
+suma.cuadrados = sum(tabla.datos.COE$microlitros.oxigeno^2)
+suma.total = sum(tabla.datos.COE$microlitros.oxigeno)
+suma.especie = aggregate(microlitros.oxigeno ~ especie, data=tabla.datos.COE, FUN="sum")
+suma.concentracion = aggregate(microlitros.oxigeno ~ conc.agua.mar, data=tabla.datos.COE, FUN="sum")
+suma.combinacion.niveles = aggregate(microlitros.oxigeno ~ especie+conc.agua.mar,
+                                     data = tabla.datos.COE, FUN="sum")
+
+# Suma de cuadrados
+SST = suma.cuadrados - suma.total^2/(a*b*n)
+SSEspecie = (1/(b*n))*sum(suma.especie[,2]^2)-suma.total^2/(a*b*n)
+SSConcentracion = (1/(a*n))*sum(suma.concentracion[,2]^2)-suma.total^2/(a*b*n)
+SSTr = (1/n)*sum(suma.combinacion.niveles[,3]^2)-suma.total^2/(a*b*n)
+SSEspecieConcentracion = SSTr-SSEspecie-SSConcentracion
+SSE = SST-SSTr
+
+# Cuadrados medios
+MSEspecie = SSEspecie/(a-1)
+MSConcentracion = SSConcentracion/(b-1)
+MSEspecieConcentracion = SSEspecieConcentracion/((a-1)*(b-1))
+MSTr = SSTr/(a*b-1)
+MSE = SSE/(a*b*(n-1))
+
+# Estadísticos F
+FTratamientos = MSTr/MSE 
+FEspecie = MSEspecie/MSE
+FConcentracion = MSConcentracion/MSE
+FEspecieConcentracion = MSEspecieConcentracion/MSE
+
+# p-valores
+p.valor.tratamientos = pf(FTratamientos,(a*b-1),(a*b*(n-1)),lower.tail = FALSE)
+p.valor.Especie = pf(FEspecie,(a-1),(a*b*(n-1)),lower.tail = FALSE)
+p.valor.Concentracion = pf(FConcentracion,(b-1),(a*b*(n-1)),lower.tail = FALSE)
+p.valor.EspecieConcentracion = pf(FEspecieConcentracion,((a-1)*(b-1)),(a*b*(n-1)),lower.tail = FALSE)
+```
+
+Realizamos una tabla con toda esta información
+
+<div class="center">
+|Variación|Grados de libertad|Suma de cuadrados|Cuadrados medios|Estadístico $F$ | p-valores |
+|:----:|---:|---:|---:|---:|---:|
+|**Tratamientos**|`r a*b-1`|`r round(SSTr,3)`|`r round(MSTr,3)`|$\dfrac{`r round(MSTr,3)`}{`r round(MSE,3)`}=`r round(FTratamientos,3)`$|$P(F_{`r a*b-1`,`r a*b*(n-1)`} > `r round(FTratamientos,3)`)=`r round(p.valor.tratamientos,3)`$|
+|**Especie**|`r a-1`|`r round(SSEspecie,3)`|`r round(MSEspecie,3)`|$\dfrac{`r round(MSEspecie,3)`}{`r round(MSE,3)`}=`r round(FEspecie,3)`$|$P(F_{`r a-1`,`r a*b*(n-1)`}>`r round(FEspecie,3)`)=`r round(p.valor.Especie,3)`$ |
+|**Concentración**|`r b-1`|`r round(SSConcentracion,3)`|`r round(MSConcentracion,3)`|$\dfrac{`r round(MSConcentracion,3)`}{`r round(MSE,3)`}=`r round(FConcentracion,3)`$|$P(F_{`r b-1`,`r a*b*(n-1)`}>`r round(FConcentracion,3)`)=`r round(p.valor.Concentracion,3)`$ |
+|**Especie.Concentración**|`r (a-1)*(b-1)`|`r round(SSEspecieConcentracion,3)`|`r round(MSEspecieConcentracion,3)`|$\dfrac{`r round(MSEspecieConcentracion,3)`}{`r round(MSE,3)`}=`r round(FEspecieConcentracion,3)`$|$P(F_{`r (a-1)*(b-1)`,`r a*b*(n-1)`}>`r round(FEspecieConcentracion,3)`)=`r round(p.valor.EspecieConcentracion,3)`$|
+|**Error**|`r a*b*(n-1)`|`r round(SSE,3)`|`r round(MSE,3)`|| |
+</div>
+
+Corroboramos los resultados con un `summary` de la función `aov`
+
+```{r}
+summary(aov(microlitros.oxigeno ~ especie*conc.agua.mar, data = tabla.datos.COE))
+
+# Para los tratamientos
+summary(aov(microlitros.oxigeno ~ especie:conc.agua.mar, data = tabla.datos.COE))
+```
+
+Estos resultados confirman nuestras primeras hipótesis cuando analizamos los gráficos. No existen diferencias en cuanto a si se afecta la cantidad de oxígeno por especies pero aceptamos diferencias por concentración del agua de mar y entre la combinación de los factores especie y concentración del agua de mar. Tampoco hay interacción entre ambos factores. 
+
+### ANEXO: Comparación de medias por parejas
+
+```{r}
+pairwise.t.test(tabla.datos.COE$microlitros.oxigeno,tabla.datos.COE$especie,p.adjust.method = "holm")
+pairwise.t.test(tabla.datos.COE$microlitros.oxigeno,tabla.datos.COE$conc.agua.mar,p.adjust.method = "holm")
+pairwise.t.test(tabla.datos.COE$microlitros.oxigeno,(tabla.datos.COE$especie:tabla.datos.COE$conc.agua.mar),p.adjust.method = "holm") 
+
+# Nuestros datos estan balanceados, por tanto podemos utilizar el Contraste de Tukey
+TukeyHSD(aov(microlitros.oxigeno ~ especie*conc.agua.mar, data = tabla.datos.COE))
+#TukeyHSD(aov(microlitros.oxigeno ~ especie:conc.agua.mar, data = tabla.datos.COE))
+```

@@ -84,4 +84,3 @@ hov(Petal.Length ~ Species, data = iris2)
 fligner.test(Petal.Length ~ Species, data = iris)
 fligner.test(Petal.Length ~ Species, data = iris2)
 ```
-

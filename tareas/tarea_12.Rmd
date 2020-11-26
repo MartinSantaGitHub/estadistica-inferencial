@@ -1,0 +1,149 @@
+---
+title: "Tarea 12"
+author: "Martin Santamaria"
+date: "24/11/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Efecto de la luz ambiental en la percepción visual
+
+```{r}
+letras.reconocidas=c(9,9,11,4,5,12,15)
+luminosidad=rep(c("alta","baja","media"),times=c(3,2,2))
+
+tabla.datos.ANOVA = data.frame(letras.reconocidas,luminosidad)
+
+head(tabla.datos.ANOVA)
+```
+
+Realizamos un primer análisis gráfico de la distribución de los datos
+
+```{r}
+boxplot(letras.reconocidas ~ luminosidad, 
+        data = tabla.datos.ANOVA,
+        xlab = "Luminosidad",
+        ylab = "Letras Reconocidas")
+```
+
+A simple vista el boxplot nos da indicios de rechazar $H_0$. Pasemos a los cálculos manuales y despues haremos uso de la función `aov`
+
+```{r}
+ni = table(tabla.datos.ANOVA$luminosidad)
+N = sum(ni)
+
+sumas.niveles = aggregate(letras.reconocidas ~ luminosidad, 
+                          data = tabla.datos.ANOVA, FUN="sum")
+sumas.niveles
+
+medias.niveles = aggregate(letras.reconocidas ~ luminosidad,
+                           data=tabla.datos.ANOVA, FUN="mean")
+medias.niveles
+
+suma.total = sum(letras.reconocidas)
+suma.total
+
+SSTotal = sum(tabla.datos.ANOVA$letras.reconocidas^2)-(suma.total^2)/N
+SSTotal
+
+SSTr = sum(sumas.niveles[,2]^2/ni)-(suma.total^2)/N
+SSTr
+
+SSE = SSTotal-SSTr
+SSE
+```
+
+### Estadísticos del contraste
+
+```{r}
+k = 3
+
+MStr = SSTr/(k-1)
+MSE = SSE/(N-k)
+est.con = MStr/MSE
+
+p.valor = pf(est.con,k-1,N-k,lower.tail = FALSE)
+p.valor
+```
+
+Tal como se pudo observar inicialmente con el boxplot, con un p-valor < 0.05, tenemos indicios para rechazar la hipótesis nula y considerar que la media de los tratamientos **no** son iguales. Veamos el resultado de hacer un summary de `aov`
+
+```{r}
+X = tabla.datos.ANOVA$letras.reconocidas
+F = tabla.datos.ANOVA$luminosidad
+
+summary(aov(X~F))
+```
+
+Hemos obtenido el mismo resultado y por tanto la misma conclusión a la que hemos llegado realizando los cálculos a mano. Calculamos los estadísticos de contraste máximos
+
+```{r}
+est.con.max.0.05 = qf(0.05,k-1,N-k,lower.tail = FALSE)
+est.con.max.0.01 = qf(0.01,k-1,N-k,lower.tail = FALSE)
+```
+
+Para un nivel de significación $\alpha = 0.05$ tenemos que el estadístico máximo de contraste es $`r round(est.con.max.0.05,2)`$ y claramente $`r round(est.con,2)` > `r round(est.con.max.0.05,2)`$. Para un nivel de significación $\alpha = 0.01$ tenemos que el estadístico máximo de contraste es $`r round(est.con.max.0.01,2)`$ y $`r round(est.con,2)` > `r round(est.con.max.0.01,2)`$. Para un nivel de significación $\alpha < 0.01$ nuestro estadístico de contraste entra en la zona de aceptación y en ese caso, no podemos rechazar la hipótesis nula $H_0$.
+
+Vamos a realizar la comparación por pares
+
+### Test T de Bonferroni
+
+```{r}
+pares = rbind(c(1,2),c(1,3),c(2,3))
+
+est.contraste.pares = (medias.niveles[pares[,1],2]-medias.niveles[pares[,2],2])/
+                      (sqrt(MSE*(1/ni[pares[,1]]+1/ni[pares[,2]])))
+
+pares = cbind(pares,est.contraste.pares)
+
+calculo.p.valor = function(x){2*(pt(abs(x),N-k,lower.tail = FALSE))}
+
+p.valores = sapply(est.contraste.pares,calculo.p.valor)
+
+pares = cbind(pares,p.valores)
+
+pares[which(p.valores < 0.05/choose(k,2)),]
+```
+
+El test nos indica que hay diferencias de medias entre la luminosidad alta y baja y entre la luminosidad baja y media. No ocurre lo mismo con las medias de la luminosidad alta y media. Podemos utilizar la función `pairwise.t.test` y ver que resultado nos devuelve
+
+```{r}
+pairwise.t.test(X,F,p.adjust.method = "bonferroni")
+```
+
+Teniendo en cuenta un nivel de significación $\alpha = 0.05$ obtenemos las mismas conclusiones. Pasemos ahora a realizar el test **T de Holm**
+
+### Test T de Holm
+
+```{r}
+pares.ord = pares[order(pares[,4]),]
+
+p.valores.ajust=pares.ord[,4]*(choose(k,2)+1-1:choose(k,2))
+pares.ord = cbind(pares.ord,p.valores.ajust)
+round(pares.ord,12)
+
+round(pares.ord[which(pares.ord[,5] <= 0.05),],6)
+```
+
+El test de Holm nos indica que todas las medias de todos los factores son diferentes entre sí, a diferencia del test T de Bonferroni. Veamos que nos dice la función pairwise.t.test
+
+```{r}
+pairwise.t.test(X,F,p.adjust.method = "holm")
+```
+
+Misma conclusión con un nivel de significación $\alpha = 0.05$. Siendo más potente el test de Holm, nos inclinaríamos por este último. Sin embargo, me gustaría realizar un test más para desempatar. El **Contraste de Duncan**
+
+### Contraste de Duncan
+
+```{r}
+library(agricolae)
+
+resultado.anova = aov(X~F)
+
+duncan.test(resultado.anova,"F",group=TRUE)$group
+```
+
+Obtenemos las mismas conclusiones que con el test de Holm, por tanto, concluimos en que todas las medias de los niveles de luminosidad son distintas entre sí.

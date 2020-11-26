@@ -1,0 +1,77 @@
+---
+title: "Tarea 11"
+author: "Martin Santamaria"
+date: "23/11/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Contraste del efecto del alcohol en la realización de sumas 
+
+```{r}
+cantidad.errores.cometidos=c(2,4,7,8,9,10,10,6)
+tratamientos=c(rep("placebo",times=2),rep("cerveza",times=3),rep("pelotazo",times=3))
+
+tabla.datos.ANOVA = data.frame(cantidad.errores.cometidos,tratamientos)
+
+head(tabla.datos.ANOVA)
+```
+
+Realizamos un primer análisis gráfico de la distribución de los datos
+
+```{r}
+boxplot(cantidad.errores.cometidos ~ tratamientos, 
+        data = tabla.datos.ANOVA,
+        xlab = "Tratamiento",
+        ylab = "Errores Cometidos")
+```
+
+A simple vista el boxplot nos da indicios de rechazar $H_0$. Pasemos a los cálculos manuales y despues haremos uso de la función `aov`
+
+```{r}
+ni = table(tabla.datos.ANOVA$tratamientos)
+N = sum(ni)
+
+sumas.niveles = aggregate(cantidad.errores.cometidos ~ tratamientos, 
+                          data = tabla.datos.ANOVA, FUN="sum")
+sumas.niveles
+
+suma.total = sum(cantidad.errores.cometidos)
+suma.total
+
+SSTotal = sum(tabla.datos.ANOVA$cantidad.errores.cometidos^2)-(suma.total^2)/N
+SSTotal
+
+SSTr = sum(sumas.niveles[,2]^2/ni)-(suma.total^2)/N
+SSTr
+
+SSE = SSTotal-SSTr
+SSE
+```
+
+### Estadísticos del contraste
+
+```{r}
+k = 3
+
+MStr = SSTr/(k-1)
+MSE = SSE/(N-k)
+F = MStr/MSE
+
+p.valor = pf(F,k-1,N-k,lower.tail = FALSE)
+p.valor
+```
+
+Tal como se pudo observar inicialmente con el boxplot, con un p-valor < 0.05, tenemos indicios para rechazar la hipótesis nula y considerar que la media de los tratamientos **no** son iguales. Veamos el resultado de hacer un summary de `aov`
+
+```{r}
+X = tabla.datos.ANOVA$cantidad.errores.cometidos
+F = tabla.datos.ANOVA$tratamientos
+
+summary(aov(X~F))
+```
+
+Hemos obtenido el mismo resultado y por tanto la misma conclusión a la que hemos llegado realizando los cálculos a mano.
