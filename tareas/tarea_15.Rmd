@@ -1,0 +1,379 @@
+---
+title: "Tarea 15"
+author: "Martin Santamaria"
+date: "27/11/2020"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+Sys.setenv(RETICULATE_PYTHON = "/Python38")
+library(reticulate)
+```
+
+### Ejercicio 1
+
+Se trata de un ANOVA de un factor fijo. Para este primer ejercicio y para variar un poco, lo realizaré en `Python`
+
+```{python}
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import scipy.stats as stats
+import seaborn as sns
+```
+
+#### Datos
+
+```{python}
+entrenamiento = np.repeat(a = ["0.5","1.0","1.5","2.0"],repeats=3)
+tarea = [1,3,5,4,6,2,3,5,7,8,10,6]
+tabla_datos = pd.DataFrame({"Tarea":tarea,"Entrenamiento":entrenamiento})
+tabla_datos.head()
+```
+
+#### Modelo
+
+Veamos si la muestra cumple con las condiciones del modelo para someterse a un ANOVA
+
+#### Normalidad
+
+```{python}
+tratamientos = tabla_datos.groupby("Entrenamiento").groups
+grupo_media_hora = tarea[np.min(tratamientos["0.5"]):np.max(tratamientos["0.5"])+1]
+grupo_una_hora = tarea[np.min(tratamientos["1.0"]):np.max(tratamientos["1.0"])+1]
+grupo_hora_y_media = tarea[np.min(tratamientos["1.5"]):np.max(tratamientos["1.5"])+1]
+grupo_dos_horas = tarea[np.min(tratamientos["2.0"]):np.max(tratamientos["2.0"])+1]
+
+muestras = [(grupo_media_hora),(grupo_una_hora),(grupo_hora_y_media),(grupo_dos_horas)]
+
+for muestra in muestras:
+  stats.shapiro(x=muestra) 
+```
+
+Los p-valores de cada muestra son muy grandes confirmando que la distribución de cada grupo es una normal. 
+
+#### Homocedasticidad
+
+```{python}
+from scipy.stats import bartlett
+
+bartlett(grupo_media_hora,grupo_una_hora,grupo_hora_y_media,grupo_dos_horas)
+```
+
+Ni hablar del p-valor que directamente nos devolvió $1$ en el análisis de la igualdad de $\sigma^2$ para las distintas poblaciones, confirmando la homocedasticidad entre las mismas. 
+
+#### Gráfico
+
+Confirmado el modelo para la realización de un ANOVA, haremos un gráfico preliminar para darnos una primera aproximación
+
+```{python}
+sns.boxplot(x=tabla_datos["Entrenamiento"],y=tabla_datos["Tarea"])
+plt.show()
+```
+
+El gráfico de boxplots nos muestra claramente una diferencia de medias. Realicemos un test de ANOVA correspondiente
+
+#### Contraste ANOVA
+
+```{python}
+t_anova = stats.f_oneway(grupo_media_hora,grupo_una_hora,grupo_hora_y_media,grupo_dos_horas)
+t_anova
+```
+
+El p-valor obtenido **`r round(py$t_anova$pvalue,5)`** está en la zona de penumbra. Por tanto, no tenemos evidencias suficientes para rechazar o aceptar la hipótesis nula. El gráfico de los boxplots nos indicaría que sí, que se rechaza la hipótesis nula de igualdad de medias pero lo más recomendable es repetir el test tomando muestras de mayor tamaño.
+
+### Ejercicio 2
+
+Aquí tenemos un ANOVA por bloques. Sobre el modelo hagamos las siguientes suposiciones:
+
+#### Modelo
+
+- Por un lado, tenemos $k\cdot b$ observaciones cada una de tamaño 1.
+
+- Luego suponemos estas $k\cdot b$ poblaciones que son todas normales y homocedasticas, es decir, todas con la misma varianza $\sigma^2$. La realidad es que deberiamos tomar una muestra mayor por cada subpoblación $k\cdot b$ para realizar los tests correspondientes de normalidad e igualdad de varianzas, pero al tener solo una muestra de cada una, aceptamos que son normales y con la misma varianza.
+
+- Por último, necesitamos ver si el efecto de los bloques y los tratamientos es **aditivo**, o sea, si no hay **interacción** entre los bloques y los tratamientos. Mismo caso anterior, al tener solo una muestra de cada tratamiento por bloque y no disponer de la media para cada bloque y tratamiento, vamos a dar por supuesto que el efecto de los bloques y los tratamientos es **aditivo**. Empecemos armando los datos
+
+#### Datos
+
+```{r}
+dias.lluvia = c(22,25,24,11,21,19,18,16,
+                17,23,26,17,20,31,25,24,
+                16,15,23,24,21,35,23,20)
+mes = factor(rep(c("Enero","Febrero","Marzo","Julio"),times=6))
+hora = factor(rep(9:14,each=4))
+tabla.datos.ANOVA.BLOQUES = data.frame(dias.lluvia,mes,hora)
+
+head(tabla.datos.ANOVA.BLOQUES)
+```
+
+#### Gráfico
+
+Realicemos un par de gráficos iniciales, por mes y otro por horas
+
+```{r}
+boxplot(dias.lluvia ~ mes,
+        data = tabla.datos.ANOVA.BLOQUES,
+        xlab = "Mes",
+        ylab = "Frecuencia Lluvia",
+        col = c("red","green","blue","orange"))
+```
+
+Del gráfico podriamos quizas notar cierta similitud, salvo en el mes de marzo. 
+
+```{r}
+boxplot(dias.lluvia ~ hora,
+        data = tabla.datos.ANOVA.BLOQUES,
+        xlab = "Hora",
+        ylab = "Frecuencia Lluvia",
+        col = c("red","green","blue","orange","brown","pink"))
+```
+
+El gráfico por horas se ve más equilibrado, salvo quizas para la hora 13. Realicemos el test correspondiente
+
+#### Contraste
+
+```{r}
+summary(aov(dias.lluvia~mes+hora,data=tabla.datos.ANOVA.BLOQUES))
+```
+
+Con un p-valor > 0.05 y por encima, apenas de 0.1, aceptamos la hipótesis nula considerando igualdad de medias de la cantidad de días de lluvia en los diferentes meses. Para el caso de los meses, el p-valor levemente superior de 0.1 confirma el gráfico donde apenas se notaban diferencias, en especial en el mes de marzo. En el caso de las horas, el p-valor es muy superior y por tanto, no rechazamos la igualdad de medias de la cantidad de días de lluvia en las diferentes horas. Por último veamos que valor nos da la eficiencia relativa, RE 
+
+```{r}
+num.horas = 6
+num.meses = 4
+
+suma.total = sum(tabla.datos.ANOVA.BLOQUES$dias.lluvia)
+suma.total.cuadrados = sum(tabla.datos.ANOVA.BLOQUES$dias.lluvia^2)
+sumas.meses = aggregate(dias.lluvia ~ mes,data = tabla.datos.ANOVA.BLOQUES, FUN="sum")
+sumas.horas = aggregate(dias.lluvia ~ hora,data = tabla.datos.ANOVA.BLOQUES, FUN="sum")
+
+SST = suma.total.cuadrados-suma.total^2/nrow(tabla.datos.ANOVA.BLOQUES)
+SS.Mes = (1/num.horas)*sum(sumas.meses[,2]^2)-suma.total^2/nrow(tabla.datos.ANOVA.BLOQUES)
+SS.Hora = (1/num.meses)*sum(sumas.horas[,2]^2)-suma.total^2/nrow(tabla.datos.ANOVA.BLOQUES)
+SSE = SST-SS.Mes-SS.Hora
+
+MS.Hora = SS.Hora/(num.horas-1)
+MSE = SSE/((num.horas-1)*(num.meses-1))
+
+c = num.horas*(num.meses-1)/(num.horas*num.meses-1)
+RE = c+(1-c)*MS.Hora/MSE
+RE
+```
+
+El valor del RE supera apenas el valor 1, por tanto se puede decir que un diseño completamente aleatorio (CA) hubiese estado bien igual, de hecho, con un diseño CA se hubiesen necesitado $`r ceiling(RE*nrow(tabla.datos.ANOVA.BLOQUES))`$ observaciones. Tan solo $`r ceiling(RE*nrow(tabla.datos.ANOVA.BLOQUES))-nrow(tabla.datos.ANOVA.BLOQUES)`$ observaciones más comparado con el experimento de bloques completo aleatorio (BCA) actual.
+
+### Ejercicio 3
+
+En este caso, se trata de un ANOVA de dos vías balanceado ya que tenemos muestras aleatorias independientes del mismo tamaño $(n = 6)$ de cada combinación de niveles de los dos factores. Primero lo primero, armemos la tabla con los datos
+
+#### Datos
+
+```{r}
+longitud.tronco = c(69.0,96.1,121.0,71.3,102.3,
+                    122.9,73.2,107.5,123.1,75.1,
+                    103.6,125.7,74.4,100.7,125.2,75.0,101.8,120.1,
+                    71.1,81.0,101.1,69.2,85.8,103.2,70.4,86.0,
+                    106.1,73.2,87.5,109.7,71.2,
+                    88.1,109.0,70.9,87.6,106.9)
+planta = factor(rep(c("Sin Hojas","Con Hojas"),each=18))
+nivel.agua = factor(rep(c("Bajo","Medio","Alto"),times=12))
+
+# LGT: Longitud Global Tronco
+tabla.datos.LGT = data.frame(longitud.tronco,planta,nivel.agua)
+
+# Hago un doble head para ver si los datos de ambas plantas se cargaron bien
+head(tabla.datos.LGT)
+head(tabla.datos.LGT[19:nrow(tabla.datos.LGT),])
+```
+
+Verifiquemos el modelo 
+
+#### Modelo
+
+#### - Cada una de las $a\cdot b$ poblaciones es normal
+
+Utilizaremos el test de **Lilliefors** para testear la normalidad de cada una de las muestras
+
+```{r}
+library(nortest)
+
+muestras = c()
+p.values = c()
+
+for (planta in unique(tabla.datos.LGT$planta)) {
+  for (nivel in unique(tabla.datos.LGT$nivel.agua)) {
+    muestras = c(muestras,list(tabla.datos.LGT[
+      tabla.datos.LGT$planta==planta & 
+        tabla.datos.LGT$nivel.agua==nivel,"longitud.tronco"]))
+  }
+}
+
+for (muestra in muestras) {
+  p.values = c(p.values,lillie.test(muestra)$p.value)
+}
+
+length(p.values[which(p.values < 0.05 | (p.values > 0.05 & p.values < 0.1))])
+```
+
+Vemos que cada una de ellas pasa el test de normalidad. Todas provienen de una población con distribución normal
+
+#### - Todas las $a\cdot b$ poblaciones tienen la misma varianza, $\sigma^2$
+
+Utilizaremos el test de Fisher de la varianza para testear por pares cada una de las poblaciones $a\cdot b$
+
+```{r}
+for (i in 1:(length(muestras)-1)) {
+  for (j in (i+1):length(muestras)) {
+    p.value = var.test(unlist(muestras[i]),unlist(muestras[j]))$p.value
+    
+    if(p.value < 0.05 | (p.value > 0.05 & p.value < 0.1)){
+      print(sprintf("Muestra %s y %s - p.value = %.3f",i,j,p.value))
+    }
+  }
+}
+```
+
+En este caso vemos que tenemos dos grupos los cuales no pasan el test de la homocedasticidad. El segundo entra en la zona de penumbra, por tanto para ese caso concreto no podemos decidir. A los fines prácticos del ejercicio, consideraremos todas las subpoblaciones homocedasticas
+
+#### Gráfico
+
+Realicemos los gráficos iniciales
+
+```{r}
+boxplot(longitud.tronco ~ planta, data = tabla.datos.LGT, xlab="Planta",ylab="Longitud Tronco")
+boxplot(longitud.tronco ~ nivel.agua, data = tabla.datos.LGT, xlab="Nivel de Agua",ylab="Longitud Tronco")
+boxplot(longitud.tronco ~ planta+nivel.agua, data = tabla.datos.LGT,
+        xlab="Combinación Planta - Nivel de Agua",ylab="Longitud Tronco",cex.axis=0.70)
+```
+
+Salvo por plantas, se observan marcadas diferencias de la longtud media del tronco tanto por nivel de agua como por la combinación del nivel de agua y planta. Realicemos el contraste correspondiente
+
+#### Contraste
+
+```{r}
+summary(aov(longitud.tronco ~ planta*nivel.agua, data = tabla.datos.LGT))
+
+# Para los tratamientos
+summary(aov(longitud.tronco ~ planta:nivel.agua, data = tabla.datos.LGT))
+```
+
+Los gráficos no mentían, incluso vemos diferencias en cuanto a la longitud por planta, algo que con el gráfico no se detectaba a simple vista. El p-valor bajísimo en el contraste de no interacción nos muestra claramente que existe una marcada interacción entre los niveles de agua y el tipo de planta. Procedemos a realizar un test por parejas para ver las diferencias por pares. Como nuestros datos estan balanceados, podemos utilizar el Contraste de Tukey
+
+```{r}
+TukeyHSD(aov(longitud.tronco ~ planta*nivel.agua, data = tabla.datos.LGT))
+```
+
+Basicamente como podemos observar, existen diferencias tanto entre plantas como entre niveles de agua. En el caso de la combinación de factores, las combinaciones Sin Hojas:Medio - Con Hojas:Alto y Sin Hojas:Bajo - Con Hojas:Bajo son las únicas que no alterarían la longitud del tronco. Dijimos que existía interacción entre el tipo de planta y los niveles de agua. Veamos esto en un gráfico de interacción
+
+```{r}
+longitud.tronco = tabla.datos.LGT$longitud.tronco
+plantas = tabla.datos.LGT$planta
+niveles.agua = tabla.datos.LGT$nivel.agua
+
+interaction.plot(plantas,niveles.agua,longitud.tronco, xlab="Plantas",ylab="Longitud Tronco",trace.label="Niveles Agua")  
+interaction.plot(niveles.agua,plantas,longitud.tronco,xlab="Niveles de Agua",ylab="Longitud Tronco",trace.label="Plantas")
+```
+
+Se puede observar en ambos gráficos que no existe paralelismo tanto en el tipo de planta como en los niveles de agua confirmando nuestra hipótesis y el resultado del p-valor obtenido en el ANOVA.
+
+### Ejercicio 4
+
+Recurrimos nuevamente a `Python` para cerrar esta tarea. Confeccionamos los datos
+
+#### Datos
+
+```{python}
+x1 = [20,26,26,24,23,26,21]
+x2 = [24,22,20,21,21,22,20]
+x3 = [16,18,20,21,24,15,17]
+x4 = [19,15,13,16,12,11,14]
+```
+
+```{r}
+# valores = c(20,26,26,24,23,26,21,24,22,20,21,21,22,20,16,18,20,21,
+#             24,15,17,19,15,13,16,12,11,14)
+# variable.aleatoria = as.factor(rep(c("X1","X2","X3","X4"),each=7))
+# datos = data.frame(valores,variable.aleatoria)
+```
+
+#### Modelo
+
+El ejercicio nos aclara que las muestras provienen de poblaciones normales y homocedasticas, por tanto damos por sentado que se cumple el modelo para poder realizar un ANOVA. Sin embargo, nos piden comprobar si las varianzas son iguales
+
+```{python}
+stats.bartlett(x1,x2,x3,x4)
+```
+
+```{r}
+# bartlett.test(valores ~ variable.aleatoria, data = datos)
+```
+
+El p-valor obtenido nos da evidencias para aceptar la homocedasticidad de las subpoblaciones. Ya que estamos, realicemos un test de **lilliefors** para comprobar la normalidad de las muestras
+
+```{python}
+from statsmodels.stats.diagnostic import lilliefors
+
+lilliefors(x=x1,dist="norm",pvalmethod="table")
+lilliefors(x=x2,dist="norm",pvalmethod="table")
+lilliefors(x=x3,dist="norm",pvalmethod="table")
+lilliefors(x=x4,dist="norm",pvalmethod="table")
+```
+
+Verificamos, tal como lo indica el ejercicio, que las muestras provienen de poblaciones normales
+
+#### Gráfico
+
+Procedemos con el gráfico inicial exploratorio
+
+```{python}
+sns.boxplot(data=[x1,x2,x3,x4])
+plt.show()
+```
+
+A primera vista se observan diferencias de medias. Realicemos el contraste de ANOVA
+
+#### Contraste
+
+```{python}
+stats.f_oneway(x1,x2,x3,x4)
+```
+
+```{r}
+# resultado.anova = aov(valores ~ variable.aleatoria, data = datos)
+# 
+# summary(resultado.anova)
+```
+
+Era cantado el resultado del ANOVA, viendo tan solo los boxplots anteriores. Dicho p-valor de casi cero, nos obliga a rechazar la hipótesis nula de igualdad de medias. Por último, realicemos un test por parejas para ver las diferencias por pares pero esta vez utilicemos el test de **Holm** no de `Python` sino de `R`
+
+```{r}
+muestras = c(list(py$x1),list(py$x2),list(py$x3),list(py$x4))
+
+for (i in 1:(length(muestras)-1)) {
+  for (j in (i+1):length(muestras)) {
+    # Dado el test de bartlett realizado anteriormente, tenemos evidencias para 
+    # aceptar la igualdad de varianzas y por tanto especificamos el parámetro var.equal=TRUE
+    p.value = t.test(unlist(muestras[i]),unlist(muestras[j]),
+                     alternative="two.sided",var.equal=TRUE)$p.value
+    
+    if(p.value < 0.05 | (p.value > 0.05 & p.value < 0.1)){
+      print(sprintf("Muestra x%s y x%s - p.value = %.3f",i,j,p.value))
+    }
+  }
+}
+```
+
+```{r}
+# library(agricolae)
+# 
+# duncan.test(resultado.anova,"variable.aleatoria",group=FALSE)$comparison
+# TukeyHSD(resultado.anova)
+# pairwise.t.test(datos$valores,datos$variable.aleatoria,p.adjust.method = "holm")
+```
+
+Para las muestras x1 - x2 y x2 - x3, estamos en la zona de penumbra y no podemos decidir. Para el resto de las combinaciones, rechazamos igualdad de medias y nos inclinamos por la hipótesis alternativa. 
