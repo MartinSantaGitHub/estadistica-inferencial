@@ -1,0 +1,180 @@
+---
+title: "Control"
+author: "Martin Santamaria"
+date: "29/11/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Enunciado
+
+Para estudiar el efecto de distintos fertilizantes se observó el crecimiento del tallo, en un período determinado, en plantas de menta cultivadas en parcelas de terreno tratadas con diferentes soluciones nutritivas. Interesa verificar si con los fertilizantes estudiados se obtiene un crecimiento medio mayor que con el utilizado como control. Los datos obtenidos, en cm, son los siguientes:
+
+![](C:\Repositories\estadistica-inferencial\codigo\tabla_fertilizantes.jpg)
+
+#### Datos
+
+Armamos el data frame con los datos
+
+```{r}
+crecimiento = c(2.70,1.72,3.24,4.28,4.20,4.73,4.05,2.58,4.87,6.41,6.30,7.10,11.10,8.17,12.73,15.83,15.60,17.20,16.42,10.31,18.53,22.95,23.67,25.34,9.75,7.31,11.11,13.69,13.50,14.83)
+fertilizante = factor(rep(c("Control","A","B","C","D"),each=6),levels = c("Control","A","B","C","D"))
+tabla.ANOVA=data.frame(crecimiento,fertilizante)
+head(tabla.ANOVA)
+```
+
+Prestar atención al parámetro **levels** en el factor **fertilizante** ya que es importante el orden y se explicará el motivo más adelante.
+
+#### Normalidad
+
+Realizamos el test correspondiente de normalidad de las muestras. Nuestras hipótesis son
+
+$$
+\left\{
+\begin{array}{ll}
+H_0: \mbox{ La distribución de $X_i$ es del tipo $N(\mu,\sigma)$, $\forall i=1, ..., 5$}\\
+H_1: \mbox{ La distribución de $X_i$ no es del tipo $N(\mu,\sigma)$, $\forall i=1, ..., 5$}
+\end{array}
+\right.
+$$
+
+```{r}
+for (f in unique(fertilizante)) {
+  norm.test = shapiro.test(tabla.ANOVA[tabla.ANOVA$fertilizante==f,1])
+  
+  if(norm.test$p.value < 0.05){
+    print(norm.test)
+  }
+}
+```
+
+Vemos que las diferentes subpoblaciones siguen una distribución normal.
+
+#### Homocedasticidad
+
+Realizamos el test correspondiente de homocedasticidad de las muestras. Nuestras hipótesis son
+
+$$
+\left\{
+\begin{array}{l}
+H_0 : \sigma_1^2 =\sigma_2^2 =\cdots =\sigma_k^2, \mbox{con $k=5$} \\
+H_1 : \exists i,j \mid  \sigma_i^2 \not=\sigma_j^2.
+\end{array}
+\right.
+$$
+
+```{r}
+bartlett.test(crecimiento ~ fertilizante,data=tabla.ANOVA)
+```
+
+Puesto que se rechaza $H_0$, no podemos suponer que las varianzas son iguales. 
+
+Trataremos de encontrar una transformación de manera que, con los datos transformados, las varianzas resulten homogéneas.
+
+Para eso veremos si existe alguna relación entre la media y la desviación estándar de las muestras.
+
+```{r}
+boxplot(crecimiento ~ fertilizante,data=tabla.ANOVA)
+```
+
+En el gráfico podemos observar que, para los fertilizantes B y C que presentan un crecimiento mayor, la dispersión de los datos también es mayor, mientras que para el **Control** el crecimiento es menor y también es menor la dispersión.
+
+Esto nos sugiere que la desviación estándar de las muestras aumenta a medida que aumenta la media.
+
+Si hay una relación de proporcionalidad entre la media y la desviación estándar se puede lograr homogeneizar las varianzas aplicando a los datos la transformación logarítmica. 
+
+Esa relación lineal la observamos en el gráfico de la desviación estándar en función de la media, por eso transformamos los datos mediante el logaritmo obteniendo la siguiente tabla
+
+![](C:\Repositories\estadistica-inferencial\codigo\tabla_fertilizantes_log.jpg)
+
+Realizamos dicha transformación logarítmica sobre los datos en la columna crecimiento de la tabla del ANOVA que construimos al principio
+
+```{r}
+tabla.ANOVA$crecimiento = log10(tabla.ANOVA$crecimiento)
+```
+
+Realizamos nuevamente el test de homocedasticidad
+
+```{r}
+bartlett.test(crecimiento ~ fertilizante,data=tabla.ANOVA)
+```
+
+Esta vez, no podemos rechazar $H_0$ y aceptamos la homogeneidad de varianzas.
+
+#### ANOVA
+
+Con las variables transformadas efectuamos el ANOVA. Nuestras hipótesis son
+
+$$
+\left\{
+\begin{array}{l}
+H_0 : \mu_1 =\mu_2 =\cdots =\mu_k, \mbox{con $k=5$}\\
+H_1 : \exists i,j \mid  \mu_i \not=\mu_j.
+\end{array}
+\right.
+$$
+
+```{r}
+resultado.anova = aov(crecimiento ~ fertilizante,data=tabla.ANOVA)
+
+summary(resultado.anova)
+```
+
+Dado el p-valor obtenido, concluimos que hay diferencias significativas entre los crecimientos medios del tallo obtenidos con los distintos fertilizantes.
+
+El objetivo de la experiencia es verificar si con los fertilizantes analizados se obtiene un crecimiento medio mayor que el obtenido con el control. Nuestras hipótesis son
+
+$$
+\left\{
+\begin{array}{l}
+H_0 : \mu_i = \mu_1, \mbox{$\forall i=1, ..., 5$}\\
+H_1 : \mu_i > \mu_1, \mbox{$\forall i=1, ..., 5$}.
+\end{array}
+\right.
+$$
+
+Vamos a utilizar dos test a modo de ejemplo para realizar esta comparación por parejas pero antes una aclaración. ¿Se acuerdan que les dije al principio que recordaran el parámetro **levels** en el factor **fertilizante**? Pues bien, el nivel del cual se quiere realizar la comparación de menor o mayor que el resto de las medias debe figurar primero. Es por ese motivo que especificamos con el parámetro levels el orden de los niveles del factor, y en este caso como queremos comparar cual de todos los fertilizantes tiene una media mayor que el control, ponemos al nivel **Control** primero en la lista de niveles del factor.
+
+Utilizaremos la función `pairwise.t.test` para realizar la comparación por parejas y además la función `dunnettTest` del paquete `PMCMRplus` que es muy utilizada en los casos donde justamente se quiere hacer una comparación contra una muestra de control. Esta última función utiliza para la comparación una distribución llamada **distribución t de Dunnett**
+
+```{r}
+library(PMCMRplus)
+
+pairwise.t.test(tabla.ANOVA$crecimiento,
+                tabla.ANOVA$fertilizante,p.adjust.method = "holm",alternative="greater")
+dunnettTest(resultado.anova,alternative="greater")
+
+#library(DescTools)
+
+#DunnettTest(crecimiento ~ fertilizante,data=tabla.ANOVA,control="Control")
+#DunnTest(crecimiento ~ fertilizante,data=tabla.ANOVA,alternative="greater")
+#dunnettTest(crecimiento ~ fertilizante,data=tabla.ANOVA,alternative="greater")
+```
+
+Los resultados obtenidos se leen por columnas, esto es, el Control contra cada uno de los fertilizantes que figuran por filas. Si no hubiesemos ordenado los niveles con el control primero, los resultados no hubiesen aparecido de la manera en la que queriamos para poder comparar contra la muestra control. Vamos analizar los resultados obtenidos.
+
+Dado los p-valores obtenidos en ambas tablas, con nivel de significación del 5% concluimos que:
+
+- Con los fertilizantes B, C y D se obtiene un crecimiento medio del tallo significativamente mayor que el obtenido con el Control.
+
+- En el caso del fertilizante A, estamos en la zona de penumbra pero podemos realizar un segundo test, esta vez de dos colas para ver el resultado obtenido. Nuestras hipótesis son
+
+$$
+\left\{
+\begin{array}{l}
+H_0 : \mu_i = \mu_1, \mbox{$\forall i=1, ..., 5$}\\
+H_1 : \mu_i \ne \mu_1, \mbox{$\forall i=1, ..., 5$}.
+\end{array}
+\right.
+$$
+
+```{r}
+pairwise.t.test(tabla.ANOVA$crecimiento,
+                tabla.ANOVA$fertilizante,p.adjust.method = "holm",alternative="two.sided")
+dunnettTest(resultado.anova,alternative="two.sided")
+```
+
+Para los fertilizantes B, C y D los resultados concuerdan con los obtenidos anteriormente cuando realizamos el test de mayor que, mientras que para el fertilizante A, con el p-valor obtenido aceptamos la hipótesis $H_0$ concluyendo que no hay diferencias significativas del crecimiento medio del tallo comparado con el Control.
