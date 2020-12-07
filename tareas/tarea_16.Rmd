@@ -1,0 +1,563 @@
+---
+title: "Tarea 16"
+author: "Martin Santamaria"
+date: "6/12/2020"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+Sys.setenv(RETICULATE_PYTHON = "/Python38")
+library(reticulate)
+library(lmtest)
+library(car)
+library(nortest)
+```
+
+### Ejercicio 1
+
+#### Datos
+
+```{r}
+altura = c(0.4826,0.5588,0.6350,0.7874,0.8382,0.9906,1.1176,1.1430)
+lluvia = c(0.2540,0.3556,0.4572,0.5588,0.6604,0.7620,0.8636,0.9652)
+tabla.reg = data.frame(altura,lluvia)
+k=1
+n=nrow(tabla.reg)
+
+reg.lineal.simple = lm(altura~lluvia,data=tabla.reg)
+reg.lineal.simple.summary = summary(reg.lineal.simple)
+```
+
+#### a) 
+
+Determinamos la recta $\hat{y} = b_0 + b_1x$ donde $x$ es la cantidad de lluvia en $m^3$ por año 
+
+```{r}
+b_0 = reg.lineal.simple$coefficients[1]
+b_1 = reg.lineal.simple$coefficients[2]
+```
+
+$\hat{y} = `r if(round(b_0,1) != 1){b_0}` + `r if(round(b_1,1) != 1){b_1}`x$
+
+#### b)
+
+```{r}
+plot(altura~lluvia,data=tabla.reg,xlab="Lluvia",ylab="Altura")
+abline(reg.lineal.simple,col="red")
+```
+
+Podemos estudiar la linealidad del modelo con el siguiente gráfico
+
+```{r}
+crPlots(reg.lineal.simple)
+```
+
+#### c)
+
+```{r}
+I.C = confint(reg.lineal.simple,level=0.95)
+```
+
+Intervalo de confianza al $95 \%$ para el parámetro $\beta_0$
+
+$(`r round(I.C[1,1],3)`,`r round(I.C[1,2],3)`)$
+
+Intervalo de confianza al $95 \%$ para el parámetro $\beta_1$
+
+$(`r round(I.C[2,1],3)`,`r round(I.C[2,2],3)`)$
+
+#### d)
+
+Un estimador no sesgado de $\sigma_E^2$ es el siguiente: $S^2=\frac{\displaystyle \sum_{i=1}^{n} e^2_i}{n-k-1}$ siendo $k=1$
+
+```{r}
+var_e = sum(reg.lineal.simple$residuals^2)/(n-k-1)
+```
+
+Por tanto $\sigma_E^2 = `r var_e`$
+
+También se puede hallar de la siguiente manera
+
+```{r}
+var_e = reg.lineal.simple.summary$sigma^2
+```
+
+$\sigma_E^2 = `r var_e`$
+
+#### e)
+
+```{r}
+r2 = reg.lineal.simple.summary$r.squared
+r2.adj = reg.lineal.simple.summary$adj.r.squared
+```
+
+$R^2 = `r r2`$
+
+$R^2_{adj} = `r r2.adj`$
+
+Los valores son altos indicando que la linealidad del modelo es buena.
+
+#### f)
+
+Realizamos un gráfico de los residuos en función de los valores estimados
+
+```{r}
+plot(x=reg.lineal.simple$fitted.values,
+     y=reg.lineal.simple$residuals,
+     xlab="Valores estimados",
+     ylab="Residuos")
+```
+
+El gráfico tiene pinta de cielo estrellado, por tanto podríamos concluir que el modelo es homocedástico. Sin embargo, veamoslo mejor realizando un test de **Breusch-Pagan**
+
+```{r}
+bptest(reg.lineal.simple)
+```
+
+El p-valor obtenido nos coloca en la zona de penumbra. Veamos si podemos realizar un test de **White**. En primer lugar tenemos que el tamaño de la muestra de los errores es $`r length(reg.lineal.simple$residuals)`$ y el número de variables independientes auxiliares es $2$ dado que son $x_1$ y $x_1^2$. Como tenemos que el tamaño de los valores de los errores es mayor que el de las variables independientes, entonces podemos realizar el test de White
+
+```{r}
+bptest(reg.lineal.simple,~lluvia+I(lluvia^2))
+```
+
+Con el p-valor obtenido concluimos que los residuos son homocedásticos.
+
+#### g)
+
+Para estudiar la normalidad de los residuos realizamos un test de **Shapiro-Wilks**
+
+```{r}
+shapiro.test(reg.lineal.simple$residuals)
+```
+
+El p-valor obtenido nos indica que los residuos siguen una distribución normal. También podemos verlo realizando un **qqplot** teniendo en cuenta que los residuos tienen una distribución $N(0,S)$ donde $S = \sqrt{\frac{\displaystyle \sum_{i=1}^{n} e^2_i}{n-k-1}}$ siendo $k=1$
+
+```{r}
+qqPlot(reg.lineal.simple$residuals,
+       distribution="norm",
+       mean=0,sd=reg.lineal.simple.summary$sigma,
+       ylab="Residuos",
+       id = FALSE)
+```
+
+Se observa claramente en el gráfico como los valores están dentro de la banda de confianza afirmando la distribución normal de los mismos.
+
+#### h)
+
+Aplicaremos el test de **Durbin-Watson** para estudiar la correlación de los errores
+
+```{r}
+dwtest(reg.lineal.simple,alternative = 'two.sided')
+```
+
+El p-valor grande obtenido nos indica que los datos están incorrelados
+
+#### i)
+
+Por último pasemos a observar los **outliers**, **leverages** y **observaciones influyentes**
+
+- **Observaciones influyentes**
+
+```{r}
+distancias.cook=cooks.distance(reg.lineal.simple)
+which(distancias.cook > 4/(n-k-1))
+```
+
+No tenemos observaciones influyentes que afecten a la regresión
+
+- **Outliers**
+
+```{r}
+outlierTest(reg.lineal.simple)
+```
+
+El valor $7$ es un posible outlier. Sin embargo, descartamos que sea un outlier dado el p-valor ajustado obtenido del test de **Bonferroni**
+
+- **Leverages**
+
+```{r}
+valores.hat=hatvalues(reg.lineal.simple)
+which(valores.hat > 2*(k+1)/n)
+```
+
+Y por último, tampoco tenemos observaciones "leverage".
+
+### Ejercicio 2
+
+#### Datos
+
+```{r}
+biomasa = c(16.6,49.1,121.7,219.6,375.5,570.8,648.2,755.6)
+radiacion = c(29.7,68.4,120.7,217.2,313.5,419.1,535.9,641.5)
+tabla.reg = data.frame(biomasa,radiacion)
+k=1
+n=nrow(tabla.reg)
+
+reg.lineal.simple = lm(biomasa~radiacion,data=tabla.reg)
+reg.lineal.simple.summary = summary(reg.lineal.simple)
+```
+
+#### a) 
+
+Determinamos la recta $\hat{y} = b_0 + b_1x$ donde $x$ es la cantidad de radiación solar acumulada
+durante un período de ocho semanas 
+
+```{r}
+b_0 = reg.lineal.simple$coefficients[1]
+b_1 = reg.lineal.simple$coefficients[2]
+```
+
+$\hat{y} = `r if(round(b_0,1) != 1){b_0}` + `r if(round(b_1,1) != 1){b_1}`x$
+
+#### b) 
+
+```{r}
+plot(biomasa~radiacion,data=tabla.reg,xlab="Radación",ylab="Biomasa")
+abline(reg.lineal.simple,col="red")
+```
+
+Podemos estudiar la linealidad del modelo con el siguiente gráfico
+
+```{r}
+crPlots(reg.lineal.simple,xlab="Radiación")
+```
+
+#### c) 
+
+```{r}
+I.C = confint(reg.lineal.simple,level=0.95)
+```
+
+Intervalo de confianza al $95 \%$ para el parámetro $\beta_0$
+
+$(`r round(I.C[1,1],3)`,`r round(I.C[1,2],3)`)$
+
+Intervalo de confianza al $95 \%$ para el parámetro $\beta_1$
+
+$(`r round(I.C[2,1],3)`,`r round(I.C[2,2],3)`)$
+
+#### d) 
+
+Un estimador no sesgado de $\sigma_E^2$ es el siguiente: $S^2=\frac{\displaystyle \sum_{i=1}^{n} e^2_i}{n-k-1}$ siendo $k=1$
+
+```{r}
+var_e = sum(reg.lineal.simple$residuals^2)/(n-k-1)
+```
+
+Por tanto $\sigma_E^2 = `r var_e`$
+
+También se puede hallar de la siguiente manera
+
+```{r}
+var_e = reg.lineal.simple.summary$sigma^2
+```
+
+$\sigma_E^2 = `r var_e`$
+
+#### e) 
+
+```{r}
+r2 = reg.lineal.simple.summary$r.squared
+r2.adj = reg.lineal.simple.summary$adj.r.squared
+```
+
+$R^2 = `r r2`$
+
+$R^2_{adj} = `r r2.adj`$
+
+Los valores son altos indicando que la linealidad del modelo es buena.
+
+#### f) 
+
+Realizamos un gráfico de los residuos en función de los valores estimados
+
+```{r}
+plot(x=reg.lineal.simple$fitted.values,
+     y=reg.lineal.simple$residuals,
+     xlab="Valores estimados",
+     ylab="Residuos")
+```
+
+El gráfico no tiene pinta de cielo estrellado, al menos no tan evidente. Estudiemos la homocedasticidad realizando un test de **Breusch-Pagan**
+
+```{r}
+bptest(reg.lineal.simple)
+```
+
+Con el p-valor obtenido concluimos que los residuos son homocedásticos.
+
+#### g) 
+
+Para estudiar la normalidad de los residuos realizamos un test de **Shapiro-Wilks**
+
+```{r}
+shapiro.test(reg.lineal.simple$residuals)
+```
+
+El p-valor obtenido nos coloca en la zona de penumbra. Realicemos un **qqplot** teniendo en cuenta que los residuos tienen distribución $N(0,S)$ donde $S = \sqrt{\frac{\displaystyle \sum_{i=1}^{n} e^2_i}{n-k-1}}$ siendo $k=1$
+
+```{r}
+qqPlot(reg.lineal.simple$residuals,
+       distribution="norm",
+       mean=0,sd=reg.lineal.simple.summary$sigma,
+       ylab="Residuos",
+       id = FALSE)
+```
+
+Se observa claramente en el gráfico como los valores están dentro de la banda de confianza, salvo uno de los valores más extremos que queda por fuera dando a entender el porqué del p-valor apenas por encima de $0.05$ obtenido anteriormente. Podríamos decir que los errores siguen una distribución normal con un nivel de significación $\alpha = 0.05$. Realicemos un test de **Anderson-Darling (A-D)** a ver si podemos echar un poco más de luz al asunto
+
+```{r}
+ad.test(reg.lineal.simple$residuals)
+```
+
+Obtenemos un p-valor algo superior que con el test de Shapiro-Wilks. Afirmamos la distribución normal de los residuos apoyandonos tanto en el gráfico como en los dos test de normalidad realizados.
+
+#### h) 
+
+Aplicaremos el test de **Durbin-Watson** para estudiar la correlación de los errores
+
+```{r}
+dwtest(reg.lineal.simple,alternative = 'two.sided')
+```
+
+El p-valor obtenido nos indica que los datos están incorrelados
+
+#### i) 
+
+Por último pasemos a observar los **outliers**, **leverages** y **observaciones influyentes**
+
+- **Observaciones influyentes**
+
+```{r}
+distancias.cook=cooks.distance(reg.lineal.simple)
+which(distancias.cook > 4/(n-k-1))
+```
+
+El valor número $8$ es una observación influyente.
+
+- **Outliers**
+
+```{r}
+outlierTest(reg.lineal.simple)
+```
+
+El valor $6$ es un posible outlier. El p-valor ajustado obtenido del test de **Bonferroni** menor que $0.05$ nos afirma que justamente es un outlier
+
+- **Leverages**
+
+```{r}
+valores.hat=hatvalues(reg.lineal.simple)
+which(valores.hat > 2*(k+1)/n)
+```
+
+Por último, no tenemos observaciones "leverage".
+
+### Ejercicio 3
+
+#### Datos
+
+```{r}
+Q_0 = c(28,112,398,772,2294,2484,2586,3024,4179,710)
+Q_p = c(32,142,502,790,3075,3230,3535,4265,6529,935)
+X_1 = c(.03,.03,.13,1.00,1.00,3.00,5.00,7.00,7.00,7.00)
+X_2 = c(3.0,3.0,6.5,15.0,15.0,7.0,6.0,6.5,6.5,6.5)
+X_3 = c(70,80,65,60,65,67,62,56,56,56)
+X_4 = c(.6,1.8,2.0,.4,2.3,1.0,.9,1.1,1.4,.7)
+
+Y = log(Q_0 / Q_p)
+
+tabla.reg = data.frame(Y,X_1,X_2,X_3,X_4)
+k=4
+n=nrow(tabla.reg)
+
+reg.lineal.multiple = lm(Y~X_1+X_2+X_3+X_4,data=tabla.reg)
+reg.lineal.multiple.summary = summary(reg.lineal.multiple)
+```
+
+#### a) 
+
+Determinamos la recta $\hat{y} = b_0 + b_1x_1+b_2x_2+b_3x_3+b_4x_4$ donde 
+
+$x_1$ es el área de la cuenca en $m^2$
+
+$x_2$ es la pendiente promedio de la cuenca (en porcentaje)
+
+$x_3$ es el índice de absorbencia superficial (0 = absorbencia completa, 100 = sin absorbencia)
+
+$x_4$ es la intensidad de pico de lluvia calculada en intervalos de media hora
+
+```{r}
+b_0 = reg.lineal.multiple$coefficients[1]
+b_1 = reg.lineal.multiple$coefficients[2]
+b_2 = reg.lineal.multiple$coefficients[3]
+b_3 = reg.lineal.multiple$coefficients[4]
+b_4 = reg.lineal.multiple$coefficients[5]
+```
+
+$\hat{y} = `r if(round(b_0,1) != 1){b_0}` `r if(round(b_1,1) != 1){b_1}`x_1 +`r if(round(b_2,1) != 1){b_2}`x_2 `r if(round(b_3,1) != 1){b_3}`x_3 `r if(round(b_4,1) != 1){b_4}`x_4$
+
+#### b) 
+
+```{r}
+I.C = confint(reg.lineal.multiple,level=0.95)
+```
+
+Intervalo de confianza al $95 \%$ para el parámetro $\beta_0$
+
+$(`r round(I.C[1,1],3)`,`r round(I.C[1,2],3)`)$
+
+Intervalo de confianza al $95 \%$ para el parámetro $\beta_1$
+
+$(`r round(I.C[2,1],3)`,`r round(I.C[2,2],3)`)$
+
+Intervalo de confianza al $95 \%$ para el parámetro $\beta_2$
+
+$(`r round(I.C[3,1],3)`,`r round(I.C[3,2],3)`)$
+
+Intervalo de confianza al $95 \%$ para el parámetro $\beta_3$
+
+$(`r round(I.C[4,1],3)`,`r round(I.C[4,2],3)`)$
+
+Intervalo de confianza al $95 \%$ para el parámetro $\beta_4$
+
+$(`r round(I.C[5,1],3)`,`r round(I.C[5,2],3)`)$
+
+#### c) 
+
+Un estimador no sesgado de $\sigma_E^2$ es el siguiente: $S^2=\frac{\displaystyle \sum_{i=1}^{n} e^2_i}{n-k-1}$ siendo $k=4$
+
+```{r}
+var_e = sum(reg.lineal.multiple$residuals^2)/(n-k-1)
+```
+
+Por tanto $\sigma_E^2 = `r var_e`$
+
+También se puede hallar de la siguiente manera
+
+```{r}
+var_e = reg.lineal.multiple.summary$sigma^2
+```
+
+$\sigma_E^2 = `r var_e`$
+
+#### d)
+
+```{r}
+r2 = reg.lineal.multiple.summary$r.squared
+r2.adj = reg.lineal.multiple.summary$adj.r.squared
+```
+
+$R^2 = `r r2`$
+
+$R^2_{adj} = `r r2.adj`$
+
+Los valores son altos indicando que la linealidad del modelo es buena (en realidad el coeficiente de determinación que cuenta es el ajustado).
+
+#### e)
+
+Realizamos un gráfico de los residuos en función de los valores estimados
+
+```{r}
+plot(x=reg.lineal.multiple$fitted.values,
+     y=reg.lineal.multiple$residuals,
+     xlab="Valores estimados",
+     ylab="Residuos")
+```
+
+El gráfico se podría decir que tiene pinta de cielo estrellado y concluir que los residuos son homocedásticos. Estudiemos la homocedasticidad realizando un test de **Breusch-Pagan**
+
+```{r}
+bptest(reg.lineal.multiple)
+```
+
+Con el p-valor obtenido concluimos que el modelo es homocedástico.
+
+#### f)
+
+Para estudiar la normalidad de los residuos realizamos un test de **Shapiro-Wilks**
+
+```{r}
+shapiro.test(reg.lineal.multiple$residuals)
+```
+
+El p-valor obtenido nos afirma claramente que los residuos siguen una distribución normal. Realicemos un **qqplot** teniendo en cuenta que los residuos tienen distribución $N(0,S)$ donde $S = \sqrt{\frac{\displaystyle \sum_{i=1}^{n} e^2_i}{n-k-1}}$ siendo $k=4$
+
+```{r}
+qqPlot(reg.lineal.multiple$residuals,
+       distribution="norm",
+       mean=0,sd=reg.lineal.multiple.summary$sigma,
+       ylab="Residuos",
+       id = FALSE)
+```
+
+Se observa claramente en el gráfico como los valores están dentro de la banda de confianza. Concluimos que los errores siguen una distribución normal.
+
+#### g)
+
+Aplicaremos el test de **Durbin-Watson** para estudiar la correlación de los residuos
+
+```{r}
+dwtest(reg.lineal.multiple,alternative = 'two.sided')
+```
+
+El p-valor tremendamente alto obtenido nos indica que los datos están incorrelados.
+
+#### h)
+
+Realicemos un test de **Tukey** para estudiar la aditividad del modelo
+
+```{r}
+residualPlots(reg.lineal.multiple,plot=FALSE)
+```
+
+El p-valor grande obtenido nos da evidencias para aceptar la aditividad del modelo. Pasemos ahora a estudiar la linealidad del mismo
+
+```{r}
+crPlots(reg.lineal.multiple)
+```
+
+En los gráficos se observa claramente solo dos variables significativas $x_1$ y $x_4$. Esto nos lleva a realizar una comparación entre modelos. Realicemos esto con la función `step`
+
+```{r}
+step(reg.lineal.multiple)
+```
+
+Los resultados nos dicen que el mejor modelo es el que tiene en cuenta a las variables independientes $x_1$, $x_2$ y $x_4$. Sin embargo, dada la falta de lienalidad que existe en cuanto a la variable $x_2$, yo consideraría al mejor modelo el que tiene en cuenta las variables $x_1$ y $x_4$.
+
+#### i)
+
+Pasemos a observar los **outliers**, **leverages** y **observaciones influyentes**
+
+- **Observaciones influyentes**
+
+```{r}
+distancias.cook=cooks.distance(reg.lineal.multiple)
+which(distancias.cook > 4/(n-k-1))
+```
+
+El valor número $2$ es una observación influyente.
+
+- **Outliers**
+
+```{r}
+outlierTest(reg.lineal.multiple)
+```
+
+El valor $2$ es un posible outlier, pero el p-valor nos permite rechazar que justamente sea un outlier
+
+- **Leverages**
+
+```{r}
+valores.hat=hatvalues(reg.lineal.multiple)
+which(valores.hat > 2*(k+1)/n)
+```
+
+Por último, no tenemos observaciones "leverage".
+
+```{r}
+anova(reg.lineal.multiple)
+```
