@@ -1,0 +1,93 @@
+---
+title: "Tarea 17"
+author: "Martin Santamaria"
+date: "13/12/2020"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Ejercicio 1
+
+```{r}
+library(faraway)
+```
+
+**a)**
+
+```{r}
+set.seed(2020)
+muestra.indices = sample(1:595,25,replace=FALSE)
+muestra.jugadores = worldcup[muestra.indices,]
+```
+
+**b)**
+
+```{r}
+muestra.cuantitativas = scale(muestra.jugadores[,c("Time","Shots","Passes","Tackles","Saves")])
+
+veces = 50
+
+km = kmeans(muestra.cuantitativas,centers=4,algorithm="MacQueen")
+SSC = km$tot.withinss
+  
+for (i in 1:veces-1){
+  km.current = kmeans(muestra.cuantitativas,centers=4,algorithm="MacQueen")
+  
+  if(km.current$tot.withinss < SSC){
+    km = km.current
+    SSC = km.current$tot.withinss
+  }
+}
+
+km
+```
+
+**c)**
+
+```{r}
+table(km$cluster,muestra.jugadores$Position)
+```
+
+### Ejercicio 2
+
+**b)**
+
+```{r}
+distancia.jugadores = dist(muestra.cuantitativas,method="euclidean")
+head(round(as.matrix(distancia.jugadores),2))
+```
+
+**c)**
+
+```{r}
+clustering.jugadores = hclust(distancia.jugadores,method="average")
+plot(clustering.jugadores,
+     hang=-1,
+     xlab="Muestra de Jugadores dataframe worldcup",
+     sub="", 
+     ylab="Distancias")
+```
+
+**d)**
+
+```{r}
+clusters.jugadores = cutree(clustering.jugadores,k=4)
+
+plot(clustering.jugadores,
+     hang=-1,
+     xlab="Muestra de Jugadores dataframe worldcup",
+     sub="", 
+     ylab="Distancias")
+rect.hclust(clustering.jugadores,k=4)
+```
+
+**e)**
+
+```{r}
+table(clusters.jugadores,muestra.jugadores$Position)
+```

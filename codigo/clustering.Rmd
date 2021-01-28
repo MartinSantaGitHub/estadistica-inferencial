@@ -1,0 +1,292 @@
+---
+title: "Clustering"
+author: "Martin Santamaria"
+date: "9/12/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+Sys.setenv(RETICULATE_PYTHON = "/Python38")
+library(reticulate)
+```
+
+#### k-means
+
+```{r}
+resultado.km.trees=kmeans(trees,centers=3,algorithm = 'MacQueen')
+resultado.km.trees
+
+# Los que corresponden al cluster número 1
+which(resultado.km.trees$cluster==1)
+
+# El centro del cluster número 1 ha sido
+resultado.km.trees$centers[1,]
+
+# Las sumas de cuadrados de cada cluster
+resultado.km.trees$withinss
+
+# La suma de cuadrados de todos los clusters
+sum(resultado.km.trees$withinss)
+
+resultado.km.trees$tot.withinss
+
+# La suma de los cuadrados suponiendo que sólo hubiera un cluster
+resultado.km.trees$totss
+
+# La dispersión de los centros de los clusters respecto del punto medio de todos los árboles vale
+resultado.km.trees$betweenss
+
+centro.global=apply(trees,2,mean)
+sum(resultado.km.trees$size*apply((t(resultado.km.trees$centers)-centro.global)^2,2,sum))
+
+# Los clusters han explicado un ##.##% de la variabilidad total de los puntos
+
+# Ejecutemos el algoritmo de k-means sobre la tabla de datos trees 50 veces a ver si podemos obtener un mínimo más óptimo
+veces=50
+SSCs=c()
+for (i in 1:veces){
+  SSCs=c(SSCs,kmeans(trees,3,algorithm = "MacQueen")$tot.withinss)
+}
+(min(SSCs))
+```
+
+#### Segmentar usuarios en campañas de redes sociales
+
+```{python}
+# Importar las librerias
+import numpy as np
+import matplotlib.pyplot as plt
+import pandas as pd
+
+# Cargamos los datos con pandas
+dataset = pd.read_csv("C:/Repositories/estadistica-inferencial/datasets/Mall_Customers.csv")
+X = dataset.iloc[:,[3,4]].values
+
+# Metodo del codo para averiguar el numero optimo de clusters
+from sklearn.cluster import KMeans
+wcss = []
+for i in range(1,11):
+  kmeans = KMeans(n_clusters = i, init = "k-means++", max_iter = 300, n_init = 10, random_state = 0)
+  kmeans.fit(X)
+  wcss.append(kmeans.inertia_)
+plt.plot(range(1,11),wcss)
+plt.title("Metodo del codo")
+plt.xlabel("Numero de Clusters")
+plt.ylabel("WCSS(k)")
+plt.show()
+```
+
+```{python}
+# Aplicar el metodo de k-means para segmentar el data set
+kmeans = KMeans(n_clusters = 5, init = "k-means++", max_iter = 300, n_init = 10, random_state = 0)
+y_kmeans = kmeans.fit_predict(X)
+
+# Visualizacion de los clusters 
+plt.scatter(X[y_kmeans == 0,0],X[y_kmeans == 0,1],s=100,c="red",label="Cautos")
+plt.scatter(X[y_kmeans == 1,0],X[y_kmeans == 1,1],s=100,c="blue",label="Estandar")
+plt.scatter(X[y_kmeans == 2,0],X[y_kmeans == 2,1],s=100,c="green",label="Objetivo")
+plt.scatter(X[y_kmeans == 3,0],X[y_kmeans == 3,1],s=100,c="cyan",label="Descuidados")
+plt.scatter(X[y_kmeans == 4,0],X[y_kmeans == 4,1],s=100,c="magenta",label="Conservadores")
+plt.scatter(kmeans.cluster_centers_[:,0],kmeans.cluster_centers_[:,1],s=300,c="yellow",label="Baricentros")
+plt.title("Cluster de clientes")
+plt.xlabel("Ingresos anuales (en miles de $)")
+plt.ylabel("Puntuacion de Gastos (1-100)")
+plt.legend()
+plt.show()
+```
+
+### Clustering jerárquico
+
+#### Datos binarios
+
+```{r}
+library(car)
+set.seed(888)  # Fijamos la semilla
+individuos.elegidos = sample(1:5226,25)
+tabla.arrestados = Arrests[individuos.elegidos,c("colour","sex","employed","citizen")]
+rownames(tabla.arrestados)=1:25
+
+head(tabla.arrestados,10)
+```
+
+```{r}
+tabla.arrestados$colour = ifelse(tabla.arrestados$colour=="White",0,1)
+tabla.arrestados$sex = ifelse(tabla.arrestados$sex=="Male",0,1)
+tabla.arrestados$employed = ifelse(tabla.arrestados$employed=="No",0,1)
+tabla.arrestados$citizen = ifelse(tabla.arrestados$citizen=="No",0,1)
+
+# Distancia de Hamming
+as = function(xi,xj){
+  n=length(xi)
+  a0 = length(which(xi==xj & xi==0))
+  a1 = length(which(xi==xj & xi==1))
+  a2 = length(which(xi!=xj))
+  return(c(a0,a1,a2))
+}
+
+n=dim(tabla.arrestados)[1]
+matriz.dist.hamming=matrix(1,n,n)
+for (i in 1:(n-1)){
+  for (j in (i+1):n){
+    aux=as(tabla.arrestados[i,],tabla.arrestados[j,])
+    matriz.dist.hamming[i,j]=(aux[1]+aux[2])/sum(aux)
+    matriz.dist.hamming[j,i]=matriz.dist.hamming[i,j]
+  }
+}
+
+matriz.dist.hamming[1:10,1:10]
+```
+
+#### Datos continuos
+
+```{r}
+set.seed(2020)
+flores.elegidas = sample(1:150,10)
+tabla.iris = iris[flores.elegidas,]
+rownames(tabla.iris)=1:10
+```
+
+```{r}
+dist.euclidea = function(x,y){
+  n=length(x)
+  d = sqrt(sum((x-y)^2))
+  return(d)
+}
+
+n=dim(tabla.iris)[1]
+
+matriz.dist.iris = matrix(0,n,n)
+for (i in 1:(n-1)){
+  for (j in (i+1):n){
+    matriz.dist.iris[i,j]=dist.euclidea(tabla.iris[i,1:4],tabla.iris[j,1:4])
+    matriz.dist.iris[j,i]=matriz.dist.iris[i,j]
+  }
+}
+```
+
+#### En R
+
+```{r}
+round(as.matrix(dist(tabla.iris[,1:4],method = "euclidean")),2)
+round(as.matrix(dist(tabla.iris[,1:4],p=2)),2)
+```
+
+#### Escalado de variables
+
+```{r}
+# Las desviaciones estándar de las variables de la tabla de datos de la muestra de flores iris que hemos trabajado son bastante diferentes
+apply(tabla.iris[,1:4],2,sd)
+
+# Si no queremos que la variación de los datos intervenga en el análisis posterior que vamos a hacer, tenemos que escalar los datos
+tabla.iris.escalada = scale(tabla.iris[,1:4])
+
+# Comprobemos que las variables de la tabla de datos nueva tienen media 0 y desviación estándar 1
+apply(tabla.iris.escalada,2,mean)
+apply(tabla.iris.escalada,2,sd)
+```
+
+### Clustering jerárquico aglomerativo
+
+```{r}
+# matriz.nueva=matriz.dist.iris
+# diag(matriz.nueva)=max(matriz.dist.iris)
+# (flores.min=which(matriz.nueva == min(matriz.nueva), arr.ind = TRUE))
+# 
+# matriz.nueva=matriz.dist.iris2
+# diag(matriz.nueva)=max(matriz.dist.iris2)
+# (flores.min2 = which(matriz.nueva == min(matriz.nueva),arr.ind=TRUE))
+
+# ...
+
+estudio.clustering.iris = hclust(dist(tabla.iris[,1:4]),method="single")
+```
+
+#### Dendrograma
+
+```{r}
+plot(estudio.clustering.iris,
+     hang=-1,
+     xlab="muestra de flores tabla de datos iris",
+     sub="", 
+     ylab="distancias",
+     labels=1:10)
+```
+
+#### ¿Cómo calcular los clusters definidos por un clustering jerárquico?
+
+```{r}
+cutree(estudio.clustering.iris,k=3)
+cutree(estudio.clustering.iris,h=1.5)
+
+plot(estudio.clustering.iris,
+     hang=-1,
+     xlab="muestra de flores tabla de datos iris",
+     sub="", 
+     ylab="distancias",
+     labels=1:10)
+rect.hclust(estudio.clustering.iris,k=3)
+
+plot(estudio.clustering.iris,
+     hang=-1,
+     xlab="muestra de flores tabla de datos iris",
+     sub="", 
+     ylab="distancias",
+     labels=1:10)
+rect.hclust(estudio.clustering.iris,h=1.5,border="green")
+```
+
+```{r}
+estudio.clustering.iris.completo=hclust(dist(tabla.iris[,1:4]),method="ward.D2")
+plot(estudio.clustering.iris.completo,
+     hang=-1,
+     xlab="muestra de flores tabla de datos iris",
+     sub="", 
+     ylab="distancias",
+     labels=1:10)
+
+cutree(estudio.clustering.iris.completo,h=1.5)
+
+plot(estudio.clustering.iris.completo,
+     hang=-1,
+     xlab="muestra de flores tabla de datos iris",
+     sub="", 
+     ylab="distancias",
+     labels=1:10)
+rect.hclust(estudio.clustering.iris.completo,h=1.5)
+```
+
+#### Para datos binarios
+
+```{r}
+estudio.clustering.arrestados=hclust(as.dist(1-matriz.dist.hamming),method="ward.D")
+
+plot(estudio.clustering.arrestados,
+     hang=-1,
+     xlab="muestra de arrestados",
+     sub="", 
+     ylab="distancias")
+rect.hclust(estudio.clustering.arrestados,k=3)
+```
+
+#### Cuestionario 11
+
+```{r}
+library(parameters)
+
+datos = mtcars[,c("mpg","hp","wt","qsec")]
+ca = cluster_analysis(datos,method="kmeans",distance ="manhattan",algorithm ="Lloyd",n_clusters=4)
+
+for (i in 1:4) {
+  print(length(which(ca[1:nrow(datos)]==i)))
+}
+
+estudio.clustering.mtcars = hclust(dist(scale(datos),method="euclidean"),method="complete")
+plot(estudio.clustering.mtcars,
+     hang=-1,
+     xlab="muestra de coches tabla de datos mtcars",
+     sub="", 
+     ylab="distancias",
+     labels=1:32)
+rect.hclust(estudio.clustering.mtcars,k=5)
+```

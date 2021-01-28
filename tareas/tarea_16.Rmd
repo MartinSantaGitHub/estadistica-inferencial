@@ -558,6 +558,43 @@ which(valores.hat > 2*(k+1)/n)
 
 Por último, no tenemos observaciones "leverage".
 
+#### Anova de los parámetros
+
 ```{r}
 anova(reg.lineal.multiple)
+```
+
+#### Ejercicio Estadística Eli
+
+```{r}
+velocidad = c(8,10,18,35,60)
+glucogenasa = c(0.2,0.5,1,2,3)
+tabla.reg = data.frame(velocidad,glucogenasa)
+k=1
+n=nrow(tabla.reg)
+
+reg.lineal.simple = lm(velocidad~glucogenasa,data=tabla.reg)
+reg.lineal.simple.summary = summary(reg.lineal.simple)
+
+predict.lm(reg.lineal.simple,data.frame(glucogenasa=2.5),interval="prediction",level= 0.95)
+
+plot(velocidad~glucogenasa,data=tabla.reg,xlab="Glucogenasa",ylab="Velocidad")
+abline(reg.lineal.simple,col="red")
+
+library(car)
+crPlots(reg.lineal.simple,xlab="Glucogenasa")
+
+confint(reg.lineal.simple,level=0.95)
+
+bptest(reg.lineal.simple)
+shapiro.test(reg.lineal.simple$residuals)
+dwtest(reg.lineal.simple,alternative = 'two.sided')
+
+distancias.cook=cooks.distance(reg.lineal.simple)
+which(distancias.cook > 4/(n-k-1))
+
+outlierTest(reg.lineal.simple)
+
+valores.hat=hatvalues(reg.lineal.simple)
+which(valores.hat > 2*(k+1)/n)
 ```
